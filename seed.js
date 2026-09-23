@@ -82,3 +82,12 @@ export const SEED_BIRTHDAYS = [
   ["27/10", "Loulergue"], ["08/11", "Braz Afonso"], ["10/11", "Costiou"], ["12/11", "LLon"], ["13/11", "Fahy"],
   ["21/12", "Roberts"], ["29/12", "Penhoët"],
 ].map(([dm, name]) => ({ day: dm, name }));
+
+// Piges reprises du Google Sheet « Saison 2026 - VELOBS X GFC » (onglet Planning, colonnes CM / C / P / E)
+export const SEED_PIGES = [
+  ["2026-10-03", "premium", "JR"], ["2026-10-04", "premium", "JR"], ["2026-10-05", "premium", "AP"],
+  ["2026-10-06", "premium", "LL"], ["2026-10-07", "classique", "LL"], ["2026-10-08", "premium", "LL"],
+  ["2026-10-10", "premium", "LL"], ["2026-10-11", "premium", "LL"], ["2026-10-13", "premium", "JR"],
+  ["2026-10-14", "premium", "LL"], ["2026-10-15", "premium", "JR"], ["2026-10-16", "premium", "JR"],
+  ["2026-10-17", "premium", "JR"], ["2026-10-18", "classique", "LL"], ["2026-10-18", "premium", "JR"],
+].map(([date, type, cm]) => ({ date, type, cm }));
