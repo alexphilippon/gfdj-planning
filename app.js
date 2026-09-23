@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, TIER_NAMES } from "./seed.js";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, TIER_NAMES } from "./seed.js";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -236,11 +236,24 @@ async function seedAll() {
   toast("Données initiales importées");
 }
 
+async function importSheetPiges() {
+  const existing = new Set(S.piges.map((p) => `${p.date}|${p.cm}|${p.type}`));
+  const b = writeBatch(db);
+  let n = 0;
+  for (const p of SEED_PIGES) {
+    if (existing.has(`${p.date}|${p.cm}|${p.type}`)) continue;
+    b.set(doc(collection(db, "piges")), { ...p, hours: null, source: "sheet", createdBy: S.user.email });
+    n++;
+  }
+  b.set(doc(db, "config", "lists"), { imports: { pigesSheet2026: true } }, { merge: true });
+  await safe(() => b.commit(), n ? `${n} piges importées du Google Sheet` : null);
+}
+
 function startListeners() {
   const pending = new Set(["access", "lists", "cards", "entries", "piges", "races", "birthdays"]);
   const done = (k) => {
     pending.delete(k);
-    if (!pending.size && !S.ready) { S.ready = true; mountShell(); }
+    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (S.isAdmin && !S.lists.imports?.pigesSheet2026) importSheetPiges(); }
     else if (S.ready) refresh(k);
   };
   const fail = (e) => { console.error(e); if (e.code === "permission-denied") { S.denied = true; renderGate(); } };
@@ -435,7 +448,8 @@ function dayCell(date, { mode, out, map }) {
     }).join("")}
     ${piges.length ? `<div class="piges">${piges.map((p) => {
       const t = PIGE_TYPES.find((x) => x[0] === p.type) || PIGE_TYPES[1];
-      return `<button class="pige ${p.cm ? "" : "todo"}" data-act="open-day" data-date="${date}" title="${esc(t[1])}${p.cm ? " – " + esc(cmName(p.cm)) : " – à attribuer"}"><b>${t[2]}</b>${p.cm ? esc(p.cm) : "à attr."}${p.type === "astreinte" && p.hours ? " " + String(p.hours).replace(".", ",") + "h" : ""}</button>`;
+      const who = p.cm ? (mode === "week" ? cmName(p.cm) : p.cm) : "à attr.";
+      return `<button class="pige ${p.cm ? "" : "todo"}" data-act="open-day" data-date="${date}" title="${esc(t[1])}${p.cm ? " – " + esc(cmName(p.cm)) : " – à attribuer"}"><b>${mode === "week" ? esc(t[1]) : t[2]}</b> ${esc(who)}${p.type === "astreinte" && p.hours ? " " + String(p.hours).replace(".", ",") + "h" : ""}</button>`;
     }).join("")}</div>` : ""}
     ${entries.map((e) => entryPill(e, mode)).join("")}
   </div>`;
