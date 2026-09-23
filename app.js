@@ -237,23 +237,31 @@ async function seedAll() {
 }
 
 async function importSheetPiges() {
-  const existing = new Set(S.piges.map((p) => `${p.date}|${p.cm}|${p.type}`));
   const b = writeBatch(db);
+  // Correction du 18/10 (import v1) : Classique = JR, Premium = LL
+  const piges = S.piges.map((p) => {
+    if (p.source === "sheet" && p.date === "2026-10-18") {
+      const cm = p.type === "classique" ? "JR" : p.type === "premium" ? "LL" : p.cm;
+      if (cm !== p.cm) { b.update(doc(db, "piges", p.id), { cm }); return { ...p, cm }; }
+    }
+    return p;
+  });
+  const existing = new Set(piges.map((p) => `${p.date}|${p.cm}|${p.type}`));
   let n = 0;
   for (const p of SEED_PIGES) {
     if (existing.has(`${p.date}|${p.cm}|${p.type}`)) continue;
     b.set(doc(collection(db, "piges")), { ...p, hours: null, source: "sheet", createdBy: S.user.email });
     n++;
   }
-  b.set(doc(db, "config", "lists"), { imports: { pigesSheet2026: true } }, { merge: true });
-  await safe(() => b.commit(), n ? `${n} piges importées du Google Sheet` : null);
+  b.set(doc(db, "config", "lists"), { imports: { pigesSheet2026: true, pigesSheet2026v2: true } }, { merge: true });
+  await safe(() => b.commit(), n ? `${n} piges importées du Google Sheet` : "Piges du Google Sheet à jour");
 }
 
 function startListeners() {
   const pending = new Set(["access", "lists", "cards", "entries", "piges", "races", "birthdays"]);
   const done = (k) => {
     pending.delete(k);
-    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (S.isAdmin && !S.lists.imports?.pigesSheet2026) importSheetPiges(); }
+    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (S.isAdmin && !S.lists.imports?.pigesSheet2026v2) importSheetPiges(); }
     else if (S.ready) refresh(k);
   };
   const fail = (e) => { console.error(e); if (e.code === "permission-denied") { S.denied = true; renderGate(); } };
