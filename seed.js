@@ -89,5 +89,17 @@ export const SEED_PIGES = [
   ["2026-10-06", "premium", "LL"], ["2026-10-07", "classique", "LL"], ["2026-10-08", "premium", "LL"],
   ["2026-10-10", "premium", "LL"], ["2026-10-11", "premium", "LL"], ["2026-10-13", "premium", "JR"],
   ["2026-10-14", "premium", "LL"], ["2026-10-15", "premium", "JR"], ["2026-10-16", "premium", "JR"],
-  ["2026-10-17", "premium", "JR"], ["2026-10-18", "classique", "LL"], ["2026-10-18", "premium", "JR"],
+  ["2026-10-17", "premium", "JR"], ["2026-10-18", "classique", "JR"], ["2026-10-18", "premium", "LL"],
+  // Jours sans C / P / E dans le Sheet = astreinte (heures à saisir après coup)
+  ...astreintes(["2026-10-01", "2026-10-02", "2026-10-09", "2026-10-12"], ["2026-10-19", "2026-12-31"]),
 ].map(([date, type, cm]) => ({ date, type, cm }));
+
+function astreintes(days, [from, to]) {
+  const out = days.map((d) => [d, "astreinte", "AP"]);
+  const d = new Date(from + "T12:00:00");
+  const end = new Date(to + "T12:00:00");
+  for (; d <= end; d.setDate(d.getDate() + 1)) {
+    out.push([`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`, "astreinte", "AP"]);
+  }
+  return out;
+}
