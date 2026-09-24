@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, TIER_NAMES } from "./seed.js?v=20260924-2";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260924-3";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -22,8 +22,8 @@ const db = getFirestore(fb);
 const storage = getStorage(fb);
 
 /* ---------- Constantes ---------- */
-const RANGE_START = "2026-09-28";
-const RANGE_TXT = "entre le 28/09/2026 et le 31/12/2027";
+const RANGE_START = "2026-09-24";
+const RANGE_TXT = "entre le 24/09/2026 et le 31/12/2027";
 const RANGE_END = "2027-12-31";
 const WINDOW = 10; // jours de tolérance autour d'une date / avant une course
 const NETWORKS = [["x", "X"], ["fb", "FB"], ["ig", "IG"], ["tt", "TikTok"], ["yt", "YT"], ["li", "LinkedIn"]];
@@ -274,7 +274,9 @@ async function importSheetPiges() {
     b.set(doc(collection(db, "piges")), { ...p, hours: null, source: "sheet", createdBy: S.user.email });
     n++;
   }
-  b.set(doc(db, "config", "lists"), { imports: { pigesSheet2026: true, pigesSheet2026v2: true, pigesSheet2026v3: true } }, { merge: true });
+  const knownRaces = new Set(S.races.map((r) => `${r.name}|${r.start}`));
+  for (const r of SEED_RACES_EXTRA) if (!knownRaces.has(`${r.name}|${r.start}`)) b.set(doc(collection(db, "races")), r);
+  b.set(doc(db, "config", "lists"), { imports: { pigesSheet2026: true, pigesSheet2026v2: true, pigesSheet2026v3: true, pigesSheet2026v4: true } }, { merge: true });
   await safe(() => b.commit(), n ? `${n} piges importées du Google Sheet` : "Piges du Google Sheet à jour");
 }
 
@@ -282,7 +284,7 @@ function startListeners() {
   const pending = new Set(["access", "lists", "cards", "entries", "piges", "races", "birthdays"]);
   const done = (k) => {
     pending.delete(k);
-    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (pendingShare) { const sh = pendingShare; pendingShare = null; openCardModal(null, sh); } if (S.isAdmin && !S.lists.imports?.pigesSheet2026v3) importSheetPiges(); }
+    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (pendingShare) { const sh = pendingShare; pendingShare = null; openCardModal(null, sh); } if (S.isAdmin && !S.lists.imports?.pigesSheet2026v4) importSheetPiges(); }
     else if (S.ready) refresh(k);
   };
   const fail = (e) => { console.error(e); if (e.code === "permission-denied") { S.denied = true; renderGate(); } };
@@ -940,7 +942,7 @@ function openPigeRecap() {
         <tr><td>Heures d'astreinte</td>${rows.map((r) => `<td>${String(r.hours).replace(".", ",")} h${r.missingHours ? `<br><small style="color:var(--amber)">${r.missingHours} sans heures</small>` : ""}</td>`).join("")}</tr>
         <tr><td>Piges à attribuer</td>${rows.map((r) => `<td>${r.todo}</td>`).join("")}</tr>
       </tbody></table>
-      <p class="muted">Compte sur la période couverte par l'outil (à partir du 28/09/2026).</p>
+      <p class="muted">Compte sur la période couverte par l'outil (à partir du 24/09/2026).</p>
     </div>`);
 }
 
