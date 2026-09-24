@@ -366,6 +366,7 @@ function mountView() {
           ${[["rating", "Tri : note"], ["recent", "Tri : plus récentes"], ["deadline", "Tri : échéance"]].map(([v, l]) => `<option value="${v}" ${f.sort === v ? "selected" : ""}>${l}</option>`).join("")}
         </select>
         <span class="count" id="desk-count"></span>
+        <button class="btn small" data-act="ig-import">Importer depuis Instagram</button>
       </div>
       <div class="desk-grid" id="desk-grid"></div>`;
     $("#f-q").addEventListener("input", (e) => { f.q = e.target.value; renderBody(); });
@@ -937,6 +938,95 @@ function openPigeRecap() {
     </div>`);
 }
 
+/* ---------- Import des enregistrements Instagram ---------- */
+const normLink = (u) => { try { const x = new URL(u); return (x.hostname.replace(/^www\./, "") + x.pathname).replace(/\/+$/, "").toLowerCase(); } catch { return (u || "").toLowerCase(); } };
+function extractSaved(json) {
+  const out = [];
+  const walk = (node, author) => {
+    if (Array.isArray(node)) return node.forEach((n) => walk(n, author));
+    if (!node || typeof node !== "object") return;
+    const a = typeof node.title === "string" && node.title ? node.title : author;
+    if (typeof node.href === "string" && /instagram\.com\/(p|reel|reels|tv)\//.test(node.href)) out.push({ href: node.href, ts: Number(node.timestamp) || null, author: a });
+    for (const k in node) if (k !== "href") walk(node[k], a);
+  };
+  walk(json, "");
+  const seen = new Set();
+  return out.filter((x) => { const k = normLink(x.href); if (seen.has(k)) return false; seen.add(k); return true; });
+}
+async function readIgFile(file) {
+  if (/\.zip$/i.test(file.name)) {
+    if (!window.JSZip) await new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+    const zip = await window.JSZip.loadAsync(file);
+    const entry = Object.values(zip.files).find((f) => /saved_posts\.json$/i.test(f.name));
+    if (!entry) throw new Error("Fichier saved_posts.json introuvable dans l'archive. As-tu choisi « Enregistrements » au format JSON ?");
+    return JSON.parse(await entry.async("string"));
+  }
+  return JSON.parse(await file.text());
+}
+function openIgImportModal() {
+  let lastImport = "";
+  try { lastImport = localStorage.getItem("gfdj-ig-last-import") || ""; } catch {}
+  const since0 = lastImport || addDays(todayIso(), -30);
+  let items = [];
+  const m = openModal(`
+    <div class="modal-head"><h2>Importer depuis Instagram</h2><button class="icon-btn" data-act="close-modal" aria-label="Fermer">×</button></div>
+    <div class="modal-body">
+      <p class="muted">Dans Instagram : Paramètres › Espace comptes › Vos informations et autorisations › Télécharger vos informations. Choisis « Enregistrements », format <b>JSON</b>. Dépose ensuite l'archive .zip reçue, ou directement le fichier <code>saved_posts.json</code>.</p>
+      <label class="field"><span>Fichier d'export</span><input type="file" id="ig-file" accept=".zip,.json,application/json,application/zip"></label>
+      <label class="field"><span>Importer les posts enregistrés depuis le</span><input type="date" id="ig-since" value="${esc(since0)}"></label>
+      ${lastImport ? `<p class="muted">Dernier import depuis cet appareil : ${fmtShort(lastImport)} ${lastImport.slice(0, 4)}.</p>` : ""}
+      <div id="ig-summary"></div>
+    </div>
+    <div class="modal-foot"><span class="spacer"></span><button class="btn" data-act="close-modal">Annuler</button><button class="btn primary" id="ig-go" disabled>Importer</button></div>`);
+  const since = $("#ig-since", m), sum = $("#ig-summary", m), go = $("#ig-go", m);
+  const selection = () => {
+    const from = since.value ? new Date(since.value + "T00:00:00").getTime() / 1000 : 0;
+    const known = new Set(S.cards.map((c) => normLink(c.link)).filter(Boolean));
+    const recent = items.filter((x) => x.ts && x.ts >= from);
+    const fresh = recent.filter((x) => !known.has(normLink(x.href)));
+    return { recent, fresh, undated: items.filter((x) => !x.ts).length };
+  };
+  const update = () => {
+    if (!items.length) { sum.innerHTML = ""; go.disabled = true; return; }
+    const { recent, fresh, undated } = selection();
+    sum.innerHTML = `<p><b>${items.length}</b> posts dans le fichier, <b>${recent.length}</b> enregistrés depuis le ${since.value ? fmtShort(since.value) : "début"}${recent.length - fresh.length ? `, dont ${recent.length - fresh.length} déjà dans le desk` : ""}.<br><b>${fresh.length} nouvelle${fresh.length > 1 ? "s" : ""} idée${fresh.length > 1 ? "s" : ""}</b> seront créées.${undated ? `<br><span class="muted">${undated} post(s) sans date ignoré(s).</span>` : ""}</p>`;
+    go.disabled = !fresh.length;
+    go.textContent = fresh.length ? `Importer ${fresh.length} idée${fresh.length > 1 ? "s" : ""}` : "Importer";
+  };
+  since.addEventListener("change", update);
+  $("#ig-file", m).addEventListener("change", async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    sum.innerHTML = `<p class="muted">Lecture du fichier…</p>`;
+    try {
+      items = extractSaved(await readIgFile(f));
+      if (!items.length) sum.innerHTML = `<p class="muted">Aucun post Instagram trouvé dans ce fichier.</p>`;
+      else update();
+    } catch (err) { items = []; go.disabled = true; sum.innerHTML = `<p style="color:var(--red)">${esc(err.message || "Fichier illisible.")}</p>`; }
+  });
+  go.addEventListener("click", async () => {
+    const { fresh } = selection();
+    go.disabled = true; go.textContent = "Import en cours…";
+    const ok = await safe(async () => {
+      for (let i = 0; i < fresh.length; i += 400) {
+        const b = writeBatch(db);
+        fresh.slice(i, i + 400).forEach((x) => {
+          const saved = x.ts ? iso(new Date(x.ts * 1000)) : "";
+          b.set(doc(collection(db, "cards")), {
+            title: x.author ? `Réf @${x.author}` : `Réf Instagram${saved ? " du " + fmtShort(saved) : ""}`,
+            link: x.href, text: "", rating: 0, labels: [], periodType: "", periodDate: "", raceId: "", deadline: "",
+            series: false, seriesTarget: "", statusManual: "", source: "instagram-export", savedOn: saved,
+            createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: S.user.email,
+          });
+        });
+        await b.commit();
+      }
+      return true;
+    }, `${fresh.length} idée${fresh.length > 1 ? "s" : ""} importée${fresh.length > 1 ? "s" : ""}`);
+    if (ok) { try { localStorage.setItem("gfdj-ig-last-import", todayIso()); } catch {} closeModal(); }
+    else update();
+  });
+}
+
 /* ---------- Admin ---------- */
 function renderAdmin() {
   const box = $("#admin-body");
@@ -1061,6 +1151,7 @@ document.addEventListener("click", async (e) => {
     case "logout": if (!S.user || confirm(`Se déconnecter (${S.user.email}) ?`)) { closeModal(); await signOut(auth); } break;
     case "view": S.view = b.dataset.v; mountShell(); break;
     case "new-card": openCardModal(null); break;
+    case "ig-import": openIgImportModal(); break;
     case "install":
       if (installPrompt) { installPrompt.prompt(); const r = await installPrompt.userChoice; installPrompt = null; b.hidden = true; if (r.outcome === "accepted") toast("App installée"); }
       break;
