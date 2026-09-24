@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260924-4";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260924-5";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -200,7 +200,31 @@ function entriesByDate(from, to) {
   for (const k in map) map[k].sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
   return map;
 }
-const entryTitle = (e) => { const c = e.cardId && cardById(e.cardId); return c ? c.title : e.title || "Sans titre"; };
+const teamShort = (t) => (TEAMS.find((y) => y[0] === t) || [])[2] || t;
+function compoTitle(keys) {
+  const pairs = (keys || []).map((k) => { const [id, t] = k.split(":"); return { r: raceById(id), t }; }).filter((x) => x.r);
+  if (!pairs.length) return "Annonce compo";
+  const teams = TEAMS.map((x) => x[0]).filter((t) => pairs.some((p) => p.t === t)).map((t) => TEAMS.find((x) => x[0] === t)[1]);
+  const names = [...new Set(pairs.map((p) => p.r.name))];
+  return `Compo ${teams.join("/")} : ${names.join(" + ")}`;
+}
+const entryTitle = (e) => {
+  if (e.kind === "compo") return compoTitle(e.compos);
+  const c = e.cardId && cardById(e.cardId); return c ? c.title : e.title || "Sans titre";
+};
+// Équipes d'une course dont la compo n'est pas encore programmée
+function missingCompos(r) {
+  const done = new Set(S.entries.filter((e) => e.kind === "compo").flatMap((e) => e.compos || []));
+  return (r.teams || ["WT"]).filter((t) => !done.has(`${r.id}:${t}`));
+}
+function ribbonHtml(r, stage) {
+  const t = (r.teams && r.teams[0]) || "WT";
+  const short = (r.teams || []).map(teamShort).join("/");
+  const today = todayIso();
+  const miss = today >= addDays(r.start, -1) && today <= r.end ? missingCompos(r) : [];
+  const alert = miss.length ? `<span class="rib-alert">Compo à annoncer${(r.teams || []).length > 1 ? " (" + miss.map(teamShort).join("/") + ")" : ""}</span>` : "";
+  return `<div class="ribbon t-${esc(t)} ${miss.length ? "missing" : ""}" title="${esc(r.name)}${stage ? " – " + esc(stage.label) : ""}${miss.length ? " – compo à annoncer" : ""}"><b>${esc(short)}</b>${alert}${esc(r.name)}${stage ? " " + esc(stage.label) : ""}</div>`;
+}
 
 function visibleRange() {
   if (S.planView === "week") { const s = startOfWeek(S.cursor); return [s, addDays(s, 6)]; }
@@ -486,17 +510,13 @@ function dayCell(date, { mode, out, map }) {
     <div class="day-head"><span class="dnum">${d.getDate()}</span>${mode === "week" || isTouch ? `<span class="dname">${d.toLocaleDateString("fr-FR", { weekday: mode === "week" ? "short" : "long" })}</span>` : ""}
       ${pigesHtml ? `<span class="piges">${pigesHtml}</span>` : ""}
       ${off ? "" : `<button class="day-add" data-act="open-day" data-date="${date}" title="Piges et publications du jour" aria-label="Ouvrir le ${fmtLong(date)}">+</button>`}</div>
-    ${races.map(({ r, stage }) => {
-      const t = (r.teams && r.teams[0]) || "WT";
-      const short = (r.teams || []).map((x) => (TEAMS.find((y) => y[0] === x) || [])[2] || x).join("/");
-      return `<div class="ribbon t-${esc(t)}" title="${esc(r.name)}${stage ? " – " + esc(stage.label) : ""}"><b>${esc(short)}</b>${esc(r.name)}${stage ? " " + esc(stage.label) : ""}</div>`;
-    }).join("")}
+    ${races.map(({ r, stage }) => ribbonHtml(r, stage)).join("")}
     ${entries.map((e) => entryPill(e, mode)).join("")}
   </div>`;
 }
 function entryPill(e, mode) {
   const nets = (e.networks || []).map((n) => (NETWORKS.find((x) => x[0] === n) || [])[1]).filter(Boolean).join(" ");
-  const cls = ["entry", e.virtual ? "bday" : "", e.published ? "pub" : "", !e.cardId && !e.virtual ? "solo" : ""].join(" ");
+  const cls = ["entry", e.virtual ? "bday" : "", e.published ? "pub" : "", e.kind === "compo" ? "compo" : !e.cardId && !e.virtual ? "solo" : ""].join(" ");
   const drag = !isTouch && !e.virtual ? `draggable="true" data-drag="entry:${e.id}"` : "";
   return `<div class="${cls}" data-act="open-entry" data-id="${esc(e.id)}" ${drag} title="${esc(entryTitle(e))}">
     ${e.time ? `<span class="t">${esc(e.time)}</span>` : ""}<span class="et">${esc(entryTitle(e))}</span>${nets ? `<span class="nets">${nets}</span>` : ""}
@@ -841,17 +861,26 @@ function openEntryModal(arg) {
     e = { date, time: "", networks: [], wording: "", title: `🎂 Anniversaire ${bday.name}`, published: false };
     isNew = true;
   } else if (typeof arg === "object") {
-    e = { date: arg.newDate, time: "", networks: [], wording: "", title: "", published: false };
+    e = { date: arg.newDate, time: "", networks: [], wording: "", title: "", published: false, kind: arg.kind || "", compos: [] };
     isNew = true;
   } else {
     e = S.entries.find((x) => x.id === arg);
     if (!e) return toast("Cette publication n'existe plus.", true);
   }
   const card = e.cardId && cardById(e.cardId);
+  const isCompo = e.kind === "compo";
+  let compoField = "";
+  if (isCompo) {
+    const sel = new Set(e.compos || []);
+    const cands = S.races.filter((r) => (r.end >= e.date && r.start <= addDays(e.date, 30)) || (r.teams || []).some((t) => sel.has(`${r.id}:${t}`)));
+    compoField = `<div class="field"><span class="field-label">Course(s) concernée(s)</span>
+      ${cands.length ? `<div class="chk-chips" style="display:grid;gap:5px">${cands.map((r) => (r.teams || ["WT"]).map((t) => `<label><input type="checkbox" name="compos" value="${r.id}:${t}" ${sel.has(`${r.id}:${t}`) ? "checked" : ""}><span>${esc(teamShort(t))} · ${fmtShort(r.start)} ${esc(r.name)}</span></label>`).join("")).join("")}</div>`
+        : `<p class="muted">Aucune course dans les 30 jours suivant cette date.</p>`}</div>`;
+  }
   const m = openModal(`
-    <div class="modal-head"><h2>${isNew ? (bday ? "Anniversaire" : "Nouvelle publication") : "Publication"}</h2><button class="icon-btn" data-act="close-modal" aria-label="Fermer">×</button></div>
+    <div class="modal-head"><h2>${isCompo ? (isNew ? "Programmer une annonce compo" : "Annonce compo") : isNew ? (bday ? "Anniversaire" : "Nouvelle publication") : "Publication"}</h2><button class="icon-btn" data-act="close-modal" aria-label="Fermer">×</button></div>
     <form class="modal-body" id="entry-form" autocomplete="off">
-      ${card ? `<div class="field"><span class="field-label">Idée d'origine</span><div class="row" style="align-items:center"><b style="flex:1">${esc(card.title)}</b><button type="button" class="btn small" data-act="open-card" data-id="${card.id}">Ouvrir la fiche</button></div></div>`
+      ${isCompo ? compoField : card ? `<div class="field"><span class="field-label">Idée d'origine</span><div class="row" style="align-items:center"><b style="flex:1">${esc(card.title)}</b><button type="button" class="btn small" data-act="open-card" data-id="${card.id}">Ouvrir la fiche</button></div></div>`
         : `<label class="field"><span>Titre</span><input name="title" required value="${esc(e.title)}" placeholder="Ex. Annonce prolongation" ${isNew && !bday ? "autofocus" : ""}></label>`}
       <div class="row">
         <label class="field"><span>Date</span><input type="date" name="date" required min="${RANGE_START}" max="${RANGE_END}" value="${esc(e.date)}"></label>
@@ -875,9 +904,11 @@ function openEntryModal(arg) {
       const fd = new FormData(form);
       const date = fd.get("date");
       if (!date || !inRange(date)) return toast(`Choisis une date ${RANGE_TXT}.`, true);
-      if (!card && !(fd.get("title") || "").trim()) return toast("Donne un titre à la publication.", true);
+      if (isCompo && !fd.getAll("compos").length) return toast("Choisis au moins une course.", true);
+      if (!isCompo && !card && !(fd.get("title") || "").trim()) return toast("Donne un titre à la publication.", true);
       const data = { date, time: fd.get("time") || "", networks: fd.getAll("networks"), wording: (fd.get("wording") || "").trim(), published: !!fd.get("published") };
-      if (!card) data.title = fd.get("title").trim();
+      if (isCompo) { data.kind = "compo"; data.compos = fd.getAll("compos"); data.title = compoTitle(data.compos); }
+      else if (!card) data.title = fd.get("title").trim();
       const ok = await safe(async () => {
         if (isNew) await addDoc(collection(db, "entries"), { ...data, cardId: "", birthdayKey: bday ? `${bday.id}_${e.date.slice(0, 4)}` : "", createdBy: S.user.email, createdAt: serverTimestamp() });
         else await updateDoc(doc(db, "entries", e.id), data);
@@ -906,7 +937,7 @@ function refreshDayModal() {
   const entries = entriesByDate(date, date)[date] || [];
   const hoursOpts = (v) => `<option value="">Heures ?</option>${Array.from({ length: 16 }, (_, i) => (i + 1) / 2).map((h) => `<option value="${h}" ${Number(v) === h ? "selected" : ""}>${String(h).replace(".", ",")} h</option>`).join("")}`;
   box.innerHTML = `
-    ${races.length ? `<div class="field"><span class="field-label">Courses</span>${races.map(({ r, stage }) => `<div class="ribbon t-${esc((r.teams || ["WT"])[0])}"><b>${esc((r.teams || []).join("/"))}</b>${esc(r.name)}${stage ? " – " + esc(stage.label) : ""}</div>`).join("")}</div>` : ""}
+    ${races.length ? `<div class="field"><span class="field-label">Courses</span>${races.map(({ r, stage }) => ribbonHtml(r, stage)).join("")}</div>` : ""}
     <div class="field"><span class="field-label">Piges CM</span>
       ${piges.length ? piges.map((p) => `<div class="pige-row" data-pige="${p.id}">
         <select data-f="type">${PIGE_TYPES.map(([v, l]) => `<option value="${v}" ${p.type === v ? "selected" : ""}>${l}</option>`).join("")}</select>
@@ -916,7 +947,7 @@ function refreshDayModal() {
       <div><button class="btn small" data-act="pige-add" data-date="${date}">Ajouter une pige</button></div></div>
     <div class="field"><span class="field-label">Publications</span>
       ${entries.length ? entries.map((e) => entryPill(e, "week")).join("") : `<p class="muted">Rien de planifié.</p>`}
-      <div><button class="btn small" data-act="entry-new" data-date="${date}">Publication sans idée du desk</button></div></div>`;
+      <div class="row" style="gap:6px"><button class="btn small" data-act="entry-new" data-date="${date}">Publication sans idée du desk</button><button class="btn small" data-act="compo-new" data-date="${date}">Programmer une annonce compo</button></div></div>`;
   $$("[data-pige] select", box).forEach((sel) => sel.addEventListener("change", async () => {
     const id = sel.closest("[data-pige]").dataset.pige;
     const f = sel.dataset.f;
@@ -1163,7 +1194,7 @@ function openRaceModal(id) {
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-act]");
   if (!b) return;
-  if (b.closest(".modal") && !["close-modal", "open-card", "open-entry", "pige-add", "pige-del", "entry-new", "comment-del"].includes(b.dataset.act)) return; // gérés localement
+  if (b.closest(".modal") && !["close-modal", "open-card", "open-entry", "pige-add", "pige-del", "entry-new", "compo-new", "comment-del"].includes(b.dataset.act)) return; // gérés localement
   const act = b.dataset.act;
   switch (act) {
     case "login":
@@ -1201,6 +1232,7 @@ document.addEventListener("click", async (e) => {
     case "pige-add": await safe(() => addDoc(collection(db, "piges"), { date: b.dataset.date, type: "classique", cm: null, hours: null, createdBy: S.user.email })); break;
     case "pige-del": await safe(() => deleteDoc(doc(db, "piges", b.dataset.id)), "Pige retirée"); break;
     case "entry-new": openEntryModal({ newDate: b.dataset.date }); break;
+    case "compo-new": openEntryModal({ newDate: b.dataset.date, kind: "compo" }); break;
     case "comment-del": if (confirm("Supprimer ce commentaire ?")) await safe(() => deleteDoc(doc(db, "cards", b.dataset.card, "comments", b.dataset.id))); break;
     case "acc-del": if (confirm(`Retirer l'accès de ${b.dataset.v} ?`)) { const map = { ...(S.access.cmByEmail || {}) }; delete map[b.dataset.v.toLowerCase()]; await safe(() => updateDoc(doc(db, "config", "access"), { allowedEmails: (S.access.allowedEmails || []).filter((x) => x !== b.dataset.v), cmByEmail: map }), "Accès retiré"); } break;
     case "cm-del": if (confirm("Retirer ce CM de la liste ? Les piges déjà attribuées gardent ses initiales.")) await saveLists({ cms: S.lists.cms.filter((_, i) => i !== Number(b.dataset.i)) }, "CM retiré"); break;
