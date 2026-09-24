@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260924-3";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260924-4";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -274,9 +274,13 @@ async function importSheetPiges() {
     b.set(doc(collection(db, "piges")), { ...p, hours: null, source: "sheet", createdBy: S.user.email });
     n++;
   }
-  const knownRaces = new Set(S.races.map((r) => `${r.name}|${r.start}`));
+  const races = S.races.map((r) => {
+    if (r.name === "Mondial U23 (Loulergue, Roberts)") { b.update(doc(db, "races", r.id), { name: "Mondial U23" }); return { ...r, name: "Mondial U23" }; }
+    return r;
+  });
+  const knownRaces = new Set(races.map((r) => `${r.name}|${r.start}`));
   for (const r of SEED_RACES_EXTRA) if (!knownRaces.has(`${r.name}|${r.start}`)) b.set(doc(collection(db, "races")), r);
-  b.set(doc(db, "config", "lists"), { imports: { pigesSheet2026: true, pigesSheet2026v2: true, pigesSheet2026v3: true, pigesSheet2026v4: true } }, { merge: true });
+  b.set(doc(db, "config", "lists"), { imports: { pigesSheet2026: true, pigesSheet2026v2: true, pigesSheet2026v3: true, pigesSheet2026v4: true, pigesSheet2026v5: true } }, { merge: true });
   await safe(() => b.commit(), n ? `${n} piges importées du Google Sheet` : "Piges du Google Sheet à jour");
 }
 
@@ -284,7 +288,7 @@ function startListeners() {
   const pending = new Set(["access", "lists", "cards", "entries", "piges", "races", "birthdays"]);
   const done = (k) => {
     pending.delete(k);
-    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (pendingShare) { const sh = pendingShare; pendingShare = null; openCardModal(null, sh); } if (S.isAdmin && !S.lists.imports?.pigesSheet2026v4) importSheetPiges(); }
+    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (pendingShare) { const sh = pendingShare; pendingShare = null; openCardModal(null, sh); } if (S.isAdmin && !S.lists.imports?.pigesSheet2026v5) importSheetPiges(); }
     else if (S.ready) refresh(k);
   };
   const fail = (e) => { console.error(e); if (e.code === "permission-denied") { S.denied = true; renderGate(); } };
