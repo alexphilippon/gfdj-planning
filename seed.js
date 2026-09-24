@@ -108,7 +108,7 @@ function astreintes(days, [from, to]) {
 
 // Courses du 24 au 27/09/2026 (ajoutées après l'import initial)
 export const SEED_RACES_EXTRA = [
-  one("Mondial U23 (Loulergue, Roberts)", "2026-09-25", ["Conti"]),
+  one("Mondial U23", "2026-09-25", ["Conti"]),
   one("Paris-Chalette-Vierzon", "2026-09-26", ["Conti"]),
   one("Paris-Chauny", "2026-09-27", ["WT"]),
   one("Prix des Vendanges", "2026-09-27", ["Conti"]),
