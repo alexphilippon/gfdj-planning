@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260924-5";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260924-6";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -213,17 +213,20 @@ const entryTitle = (e) => {
   const c = e.cardId && cardById(e.cardId); return c ? c.title : e.title || "Sans titre";
 };
 // Équipes d'une course dont la compo n'est pas encore programmée
+const composDone = (exceptId) => new Set(S.entries.filter((e) => e.kind === "compo" && e.id !== exceptId).flatMap((e) => e.compos || []));
 function missingCompos(r) {
-  const done = new Set(S.entries.filter((e) => e.kind === "compo").flatMap((e) => e.compos || []));
+  const done = composDone();
   return (r.teams || ["WT"]).filter((t) => !done.has(`${r.id}:${t}`));
 }
 function ribbonHtml(r, stage) {
   const t = (r.teams && r.teams[0]) || "WT";
   const short = (r.teams || []).map(teamShort).join("/");
   const today = todayIso();
-  const miss = today >= addDays(r.start, -1) && today <= r.end ? missingCompos(r) : [];
-  const alert = miss.length ? `<span class="rib-alert">Compo à annoncer${(r.teams || []).length > 1 ? " (" + miss.map(teamShort).join("/") + ")" : ""}</span>` : "";
-  return `<div class="ribbon t-${esc(t)} ${miss.length ? "missing" : ""}" title="${esc(r.name)}${stage ? " – " + esc(stage.label) : ""}${miss.length ? " – compo à annoncer" : ""}"><b>${esc(short)}</b>${alert}${esc(r.name)}${stage ? " " + esc(stage.label) : ""}</div>`;
+  const miss = today <= r.end ? missingCompos(r) : [];
+  const urgent = miss.length && today >= addDays(r.start, -1);
+  const multi = (r.teams || []).length > 1 ? " (" + miss.map(teamShort).join("/") + ")" : "";
+  const alert = urgent ? `<span class="rib-alert">Compo à annoncer${multi}</span>` : "";
+  return `<div class="ribbon t-${esc(t)} ${urgent ? "missing" : ""}" title="${esc(r.name)}${stage ? " – " + esc(stage.label) : ""}${miss.length ? " – compo pas encore au planning" + multi : ""}">${miss.length ? `<span class="rib-warn" aria-label="Compo pas encore au planning">⚠️</span>` : ""}<b>${esc(short)}</b>${alert}${esc(r.name)}${stage ? " " + esc(stage.label) : ""}</div>`;
 }
 
 function visibleRange() {
@@ -872,9 +875,10 @@ function openEntryModal(arg) {
   let compoField = "";
   if (isCompo) {
     const sel = new Set(e.compos || []);
+    const done = composDone(e.id);
     const cands = S.races.filter((r) => (r.end >= e.date && r.start <= addDays(e.date, 30)) || (r.teams || []).some((t) => sel.has(`${r.id}:${t}`)));
     compoField = `<div class="field"><span class="field-label">Course(s) concernée(s)</span>
-      ${cands.length ? `<div class="chk-chips" style="display:grid;gap:5px">${cands.map((r) => (r.teams || ["WT"]).map((t) => `<label><input type="checkbox" name="compos" value="${r.id}:${t}" ${sel.has(`${r.id}:${t}`) ? "checked" : ""}><span>${esc(teamShort(t))} · ${fmtShort(r.start)} ${esc(r.name)}</span></label>`).join("")).join("")}</div>`
+      ${cands.length ? `<div class="chk-chips" style="display:grid;gap:5px">${cands.map((r) => (r.teams || ["WT"]).map((t) => `<label class="compo-opt ${done.has(`${r.id}:${t}`) ? "is-done" : "is-todo"}"><input type="checkbox" name="compos" value="${r.id}:${t}" ${sel.has(`${r.id}:${t}`) ? "checked" : ""}><span><i>${done.has(`${r.id}:${t}`) ? "✓" : "●"}</i>${esc(teamShort(t))} · ${fmtShort(r.start)} ${esc(r.name)}${done.has(`${r.id}:${t}`) ? " – déjà programmée" : " – à programmer"}</span></label>`).join("")).join("")}</div>`
         : `<p class="muted">Aucune course dans les 30 jours suivant cette date.</p>`}</div>`;
   }
   const m = openModal(`
