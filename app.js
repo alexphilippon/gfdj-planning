@@ -427,7 +427,7 @@ function cardHtml(c) {
   const lvl = deadlineLevel(c);
   const labels = (c.labels || []).map(labelById).filter(Boolean).sort((x, y) => x.tier - y.tier);
   const pub = cardEntries(c.id).filter((e) => e.published).length;
-  return `<article class="card lvl-${lvl} ${st === "abandonnee" || st === "publiee" ? "dim" : ""}" data-act="open-card" data-id="${c.id}" ${isTouch ? "" : `draggable="true" data-drag="card:${c.id}"`}>
+  return `<article class="card st-${st} lvl-${lvl} ${st === "abandonnee" ? "dim" : ""}" data-act="open-card" data-id="${c.id}" ${isTouch ? "" : `draggable="true" data-drag="card:${c.id}"`}>
     <div class="card-media">${cardMedia(c)}</div>
     <div class="card-body">
       <div class="card-top"><span class="status s-${st}">${STATUS[st]}</span>${deadlineBadge(c)}</div>
@@ -546,7 +546,7 @@ function renderPanel() {
     const p = parseLink(c.link);
     const img = c.imageUrl || p?.thumb;
     const labels = (c.labels || []).map(labelById).filter(Boolean);
-    return `<div class="sug lvl-${deadlineLevel(c)}" ${isTouch ? "" : `draggable="true" data-drag="card:${c.id}"`}>
+    return `<div class="sug st-${cardStatus(c)} lvl-${deadlineLevel(c)}" ${isTouch ? "" : `draggable="true" data-drag="card:${c.id}"`}>
       <button class="sug-head" data-act="sug-toggle" data-id="${c.id}" aria-expanded="${open}"><span class="sug-title">${esc(c.title)}</span>${c.rating ? `<span class="sug-stars">★${c.rating}</span>` : ""}</button>
       <div class="sug-why">${esc(why)}${c.series ? " · série" : ""}${deadlineBadge(c)}</div>
       ${open ? `<div class="sug-detail">${img ? `<img src="${esc(img)}" alt="">` : ""}${c.text ? `<p>${esc(c.text.slice(0, 220))}${c.text.length > 220 ? "…" : ""}</p>` : ""}
