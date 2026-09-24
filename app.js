@@ -78,6 +78,25 @@ const S = {
 };
 let unsubs = [];
 
+/* ---------- Partage (PWA Android / Raccourci iOS) ---------- */
+let pendingShare = (() => {
+  const q = new URLSearchParams(location.search);
+  const raw = [q.get("url"), q.get("text"), q.get("title")].filter(Boolean).join(" ").trim();
+  if (!raw) return null;
+  history.replaceState(null, "", location.pathname);
+  const m = raw.match(/https?:\/\/[^\s]+/);
+  const link = m ? m[0].replace(/[)\].,;!?»"']+$/, "") : "";
+  const text = (link ? raw.split(link).join(" ") : raw).replace(/\s+/g, " ").trim();
+  return { link, text: text === link ? "" : text };
+})();
+let installPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  const b = $("[data-act=install]"); if (b) b.hidden = false;
+});
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch((e) => console.warn("SW", e));
+
 /* ---------- Liens & embeds ---------- */
 function parseLink(url) {
   if (!url) return null;
@@ -261,7 +280,7 @@ function startListeners() {
   const pending = new Set(["access", "lists", "cards", "entries", "piges", "races", "birthdays"]);
   const done = (k) => {
     pending.delete(k);
-    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (S.isAdmin && !S.lists.imports?.pigesSheet2026v2) importSheetPiges(); }
+    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (pendingShare) { const sh = pendingShare; pendingShare = null; openCardModal(null, sh); } if (S.isAdmin && !S.lists.imports?.pigesSheet2026v2) importSheetPiges(); }
     else if (S.ready) refresh(k);
   };
   const fail = (e) => { console.error(e); if (e.code === "permission-denied") { S.denied = true; renderGate(); } };
@@ -323,6 +342,7 @@ function mountShell() {
         ${S.isAdmin ? `<button data-act="view" data-v="admin" class="${S.view === "admin" ? "on" : ""}">Admin</button>` : ""}
       </nav>
       <div class="top-actions">
+        <button class="btn" data-act="install" ${installPrompt ? "" : "hidden"} style="background:transparent;color:#fff;border-color:#3A4870">Installer l'app</button>
         <button class="btn primary" data-act="new-card">Nouvelle idée</button>
         <button class="avatar" data-act="logout" title="Se déconnecter (${esc(u.email)})">${u.photoURL ? `<img src="${esc(u.photoURL)}" alt="">` : esc((u.displayName || u.email)[0].toUpperCase())}</button>
       </div>
@@ -604,10 +624,11 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#moda
 document.addEventListener("mousedown", (e) => { if (e.target.matches?.("[data-scrim]")) closeModal(); });
 
 /* Fiche idée */
-function openCardModal(id) {
+function openCardModal(id, prefill = null) {
   const c = id ? cardById(id) : null;
   if (id && !c) return toast("Cette idée n'existe plus.", true);
-  const d = c ? { ...c } : { title: "", text: "", link: "", rating: 0, labels: [], periodType: "", periodDate: "", raceId: "", deadline: "", series: false, seriesTarget: "" };
+  const shared = prefill && parseLink(prefill.link);
+  const d = c ? { ...c } : { title: shared ? `Réf ${shared.label} du ${fmtShort(todayIso())}` : "", text: prefill?.text || "", link: prefill?.link || "", rating: 0, labels: [], periodType: "", periodDate: "", raceId: "", deadline: "", series: false, seriesTarget: "" };
   let pendingBlob = null, removeImage = false, commentsUnsub = null;
   const st = c ? cardStatus(c) : "idee";
   const upcomingRaces = S.races.filter((r) => r.end >= todayIso() || r.id === d.raceId);
@@ -617,7 +638,7 @@ function openCardModal(id) {
   }).join("");
 
   const m = openModal(`
-    <div class="modal-head"><h2>${c ? "Fiche idée" : "Nouvelle idée"}</h2>${c ? `<span class="status s-${st}">${STATUS[st]}</span>` : ""}<button class="icon-btn" data-act="close-modal" aria-label="Fermer">×</button></div>
+    <div class="modal-head"><h2>${c ? "Fiche idée" : prefill ? "Idée partagée" : "Nouvelle idée"}</h2>${c ? `<span class="status s-${st}">${STATUS[st]}</span>` : ""}<button class="icon-btn" data-act="close-modal" aria-label="Fermer">×</button></div>
     <div class="modal-body"><div class="${c ? "two-col" : ""}">
       <form id="card-form" class="modal-body" style="padding:0" autocomplete="off">
         <label class="field"><span>Titre</span><input class="big" name="title" required value="${esc(d.title)}" placeholder="Ex. Walk & talk pied du bus" ${c ? "" : "autofocus"}></label>
@@ -1040,6 +1061,9 @@ document.addEventListener("click", async (e) => {
     case "logout": if (!S.user || confirm(`Se déconnecter (${S.user.email}) ?`)) { closeModal(); await signOut(auth); } break;
     case "view": S.view = b.dataset.v; mountShell(); break;
     case "new-card": openCardModal(null); break;
+    case "install":
+      if (installPrompt) { installPrompt.prompt(); const r = await installPrompt.userChoice; installPrompt = null; b.hidden = true; if (r.outcome === "accepted") toast("App installée"); }
+      break;
     case "open-card": e.stopPropagation(); openCardModal(b.dataset.id); break;
     case "open-entry": {
       e.stopPropagation();
