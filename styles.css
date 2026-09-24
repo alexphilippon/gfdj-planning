@@ -204,6 +204,10 @@ h1, h2, h3 { font-family: var(--display); margin: 0; letter-spacing: .01em; }
 .ribbon.t-Conti b { color: var(--t-conti); }
 .ribbon.t-Juniors { border-color: var(--t-juniors); background: #F3EEFC; }
 .ribbon.t-Juniors b { color: var(--t-juniors); }
+.ribbon.missing { background: var(--red-soft); border-left-color: var(--red); color: var(--red); }
+.ribbon.missing b { color: var(--red); }
+.rib-alert { font-weight: 800; margin-right: 4px; text-transform: uppercase; font-size: 10px; letter-spacing: .03em; }
+.entry.compo { background: var(--blue); }
 .piges { display: flex; flex-wrap: wrap; gap: 3px; }
 .pige {
   border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-size: 11px;
