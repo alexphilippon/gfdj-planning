@@ -22,7 +22,8 @@ const db = getFirestore(fb);
 const storage = getStorage(fb);
 
 /* ---------- Constantes ---------- */
-const RANGE_START = "2026-10-01";
+const RANGE_START = "2026-09-28";
+const RANGE_TXT = "entre le 28/09/2026 et le 31/12/2027";
 const RANGE_END = "2027-12-31";
 const WINDOW = 10; // jours de tolérance autour d'une date / avant une course
 const NETWORKS = [["x", "X"], ["fb", "FB"], ["ig", "IG"], ["tt", "TikTok"], ["yt", "YT"], ["li", "LinkedIn"]];
@@ -273,7 +274,7 @@ async function importSheetPiges() {
     b.set(doc(collection(db, "piges")), { ...p, hours: null, source: "sheet", createdBy: S.user.email });
     n++;
   }
-  b.set(doc(db, "config", "lists"), { imports: { pigesSheet2026: true, pigesSheet2026v2: true } }, { merge: true });
+  b.set(doc(db, "config", "lists"), { imports: { pigesSheet2026: true, pigesSheet2026v2: true, pigesSheet2026v3: true } }, { merge: true });
   await safe(() => b.commit(), n ? `${n} piges importées du Google Sheet` : "Piges du Google Sheet à jour");
 }
 
@@ -281,7 +282,7 @@ function startListeners() {
   const pending = new Set(["access", "lists", "cards", "entries", "piges", "races", "birthdays"]);
   const done = (k) => {
     pending.delete(k);
-    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (pendingShare) { const sh = pendingShare; pendingShare = null; openCardModal(null, sh); } if (S.isAdmin && !S.lists.imports?.pigesSheet2026v2) importSheetPiges(); }
+    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (pendingShare) { const sh = pendingShare; pendingShare = null; openCardModal(null, sh); } if (S.isAdmin && !S.lists.imports?.pigesSheet2026v3) importSheetPiges(); }
     else if (S.ready) refresh(k);
   };
   const fail = (e) => { console.error(e); if (e.code === "permission-denied") { S.denied = true; renderGate(); } };
@@ -499,10 +500,10 @@ function renderPlan() {
   const body = $("#plan-body");
   const title = $("#plan-title");
   if (S.planView === "year") {
-    title.textContent = "Oct. 2026 – déc. 2027";
+    title.textContent = "Sept. 2026 – déc. 2027";
     const map = entriesByDate(RANGE_START, RANGE_END);
     let html = `<div class="year">`;
-    for (let m = RANGE_START; m <= RANGE_END; m = addMonths(m, 1)) {
+    for (let m = monthStart(RANGE_START); m <= RANGE_END; m = addMonths(m, 1)) {
       const lead = (parse(m).getDay() + 6) % 7;
       html += `<div class="mini"><h3>${fmtMonth(m)}</h3><div class="mini-grid">${"<span></span>".repeat(lead)}`;
       for (let d = m; d <= monthEnd(m); d = addDays(d, 1)) {
@@ -510,6 +511,7 @@ function renderPlan() {
         const races = racesOn(d);
         const c = n === 0 ? "" : n === 1 ? "c1" : n <= 3 ? "c2" : "c3";
         const r = races.length ? "r-" + ((races[0].r.teams || [])[0] || "WT") : "";
+        if (!inRange(d)) { html += `<button disabled style="opacity:.3">${parse(d).getDate()}</button>`; continue; }
         html += `<button class="${c} ${r} ${d === todayIso() ? "today" : ""}" data-act="goto-week" data-date="${d}" title="${fmtLong(d)}${n ? ` – ${n} publication${n > 1 ? "s" : ""}` : ""}${races.length ? " – " + esc(races.map((x) => x.r.name).join(", ")) : ""}">${parse(d).getDate()}</button>`;
       }
       html += `</div></div>`;
@@ -756,7 +758,7 @@ function openCardModal(id, prefill = null) {
     }
     if (act === "card-plan") {
       const date = $("#plan-date", m).value;
-      if (!date || !inRange(date)) return toast("Choisis une date entre le 01/10/2026 et le 31/12/2027.", true);
+      if (!date || !inRange(date)) return toast(`Choisis une date ${RANGE_TXT}.`, true);
       if (await saveCard()) { await planCard(c.id, date); closeModal(); }
     }
     if (act === "card-status") { await safe(() => updateDoc(doc(db, "cards", c.id), { statusManual: b.dataset.v, updatedAt: serverTimestamp() }), b.dataset.v === "abandonnee" ? "Idée abandonnée" : b.dataset.v === "publiee" ? "Idée marquée publiée" : "Idée réactivée"); closeModal(); }
@@ -866,7 +868,7 @@ function openEntryModal(arg) {
     if (b.dataset.act === "entry-save") {
       const fd = new FormData(form);
       const date = fd.get("date");
-      if (!date || !inRange(date)) return toast("Choisis une date entre le 01/10/2026 et le 31/12/2027.", true);
+      if (!date || !inRange(date)) return toast(`Choisis une date ${RANGE_TXT}.`, true);
       if (!card && !(fd.get("title") || "").trim()) return toast("Donne un titre à la publication.", true);
       const data = { date, time: fd.get("time") || "", networks: fd.getAll("networks"), wording: (fd.get("wording") || "").trim(), published: !!fd.get("published") };
       if (!card) data.title = fd.get("title").trim();
@@ -938,7 +940,7 @@ function openPigeRecap() {
         <tr><td>Heures d'astreinte</td>${rows.map((r) => `<td>${String(r.hours).replace(".", ",")} h${r.missingHours ? `<br><small style="color:var(--amber)">${r.missingHours} sans heures</small>` : ""}</td>`).join("")}</tr>
         <tr><td>Piges à attribuer</td>${rows.map((r) => `<td>${r.todo}</td>`).join("")}</tr>
       </tbody></table>
-      <p class="muted">Compte sur la période couverte par l'outil (à partir du 01/10/2026).</p>
+      <p class="muted">Compte sur la période couverte par l'outil (à partir du 28/09/2026).</p>
     </div>`);
 }
 
