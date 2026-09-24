@@ -92,7 +92,8 @@ export const SEED_PIGES = [
   ["2026-10-14", "premium", "LL"], ["2026-10-15", "premium", "JR"], ["2026-10-16", "premium", "JR"],
   ["2026-10-17", "premium", "JR"], ["2026-10-18", "classique", "JR"], ["2026-10-18", "premium", "LL"],
   // Jours sans C / P / E dans le Sheet = astreinte (heures à saisir après coup)
-  ...astreintes(["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-09", "2026-10-12"], ["2026-10-19", "2026-12-31"]),
+  ["2026-09-25", "classique", "AP"], ["2026-09-26", "classique", "LL"], ["2026-09-27", "premium", "LL"],
+  ...astreintes(["2026-09-24", "2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-09", "2026-10-12"], ["2026-10-19", "2026-12-31"]),
 ].map(([date, type, cm]) => ({ date, type, cm }));
 
 function astreintes(days, [from, to]) {
@@ -104,3 +105,11 @@ function astreintes(days, [from, to]) {
   }
   return out;
 }
+
+// Courses du 24 au 27/09/2026 (ajoutées après l'import initial)
+export const SEED_RACES_EXTRA = [
+  one("Mondial U23 (Loulergue, Roberts)", "2026-09-25", ["Conti"]),
+  one("Paris-Chalette-Vierzon", "2026-09-26", ["Conti"]),
+  one("Paris-Chauny", "2026-09-27", ["WT"]),
+  one("Prix des Vendanges", "2026-09-27", ["Conti"]),
+];
