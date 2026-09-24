@@ -18,6 +18,7 @@ const tiers = {
   5: ["Danielo", "GOWOD", "K-EDGE", "Poggio Solutions", "SKS", "Indiba"],
 };
 export const TIER_NAMES = {
+  0: "Contexte",
   1: "Partenaires titres",
   2: "Partenaires officiels",
   3: "Fournisseurs officiels",
