@@ -182,7 +182,8 @@ h1, h2, h3 { font-family: var(--display); margin: 0; letter-spacing: .01em; }
 .day.off { background: repeating-linear-gradient(135deg, #F6F7FA 0 6px, #EEF1F5 6px 12px); }
 .day.today .dnum { background: var(--blue); color: #fff; }
 .day.over { background: var(--blue-soft); outline: 2px dashed var(--blue); outline-offset: -3px; }
-.day-head { display: flex; align-items: center; gap: 4px; }
+.day-head { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.day-head .piges { display: inline-flex; flex-wrap: wrap; gap: 3px; }
 .dnum {
   font-family: var(--display); font-weight: 700; font-size: 16px; min-width: 24px; height: 24px;
   border-radius: 99px; display: inline-grid; place-items: center; padding: 0 4px;
@@ -210,6 +211,8 @@ h1, h2, h3 { font-family: var(--display); margin: 0; letter-spacing: .01em; }
 }
 .pige b { color: var(--ink); margin-right: 2px; }
 .pige.todo { border-color: var(--red); color: var(--red); }
+.pige.mine { background: var(--blue); border-color: var(--blue); color: #fff; }
+.pige.mine b { color: #fff; }
 .entry {
   font-size: 12.5px; line-height: 1.25; padding: 3px 6px; border-radius: 5px; background: var(--ink); color: #fff;
   cursor: pointer; display: flex; flex-wrap: wrap; gap: 0 5px; align-items: baseline; min-width: 0;
