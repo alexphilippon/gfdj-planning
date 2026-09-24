@@ -143,6 +143,7 @@ const cardById = (id) => S.cards.find((c) => c.id === id);
 const cardEntries = (id) => S.entries.filter((e) => e.cardId === id);
 const labelById = (id) => S.lists.labels.find((l) => l.id === id);
 const raceById = (id) => S.races.find((r) => r.id === id);
+const myCm = () => ((S.access.cmByEmail || {})[(S.user?.email || "").toLowerCase()] || "");
 const cmName = (id) => { const c = S.lists.cms.find((x) => x.id === id); return c ? (c.name ? `${c.id} – ${c.name}` : c.id) : id; };
 
 function cardStatus(c) {
@@ -467,19 +468,22 @@ function dayCell(date, { mode, out, map }) {
   const entries = map[date] || [];
   const d = parse(date);
   const cls = ["day", out ? "out" : "", off ? "off" : "", date === todayIso() ? "today" : ""].join(" ");
+  const mine = myCm();
+  const pigesHtml = piges.map((p) => {
+    const t = PIGE_TYPES.find((x) => x[0] === p.type) || PIGE_TYPES[1];
+    const who = p.cm ? (mode === "week" ? cmName(p.cm) : p.cm) : "à attr.";
+    const cl = ["pige", p.cm ? "" : "todo", mine && p.cm === mine ? "mine" : ""].join(" ");
+    return `<button class="${cl}" data-act="open-day" data-date="${date}" title="${esc(t[1])}${p.cm ? " – " + esc(cmName(p.cm)) : " – à attribuer"}"><b>${mode === "week" ? esc(t[1]) : t[2]}</b> ${esc(who)}${p.type === "astreinte" && p.hours ? " " + String(p.hours).replace(".", ",") + "h" : ""}</button>`;
+  }).join("");
   return `<div class="${cls}" ${off ? "" : `data-drop="day" data-date="${date}"`}>
-    <div class="day-head"><span class="dnum">${d.getDate()}</span><span class="dname">${mode === "week" || isTouch ? d.toLocaleDateString("fr-FR", { weekday: mode === "week" ? "short" : "long" }) : ""}</span>
+    <div class="day-head"><span class="dnum">${d.getDate()}</span>${mode === "week" || isTouch ? `<span class="dname">${d.toLocaleDateString("fr-FR", { weekday: mode === "week" ? "short" : "long" })}</span>` : ""}
+      ${pigesHtml ? `<span class="piges">${pigesHtml}</span>` : ""}
       ${off ? "" : `<button class="day-add" data-act="open-day" data-date="${date}" title="Piges et publications du jour" aria-label="Ouvrir le ${fmtLong(date)}">+</button>`}</div>
     ${races.map(({ r, stage }) => {
       const t = (r.teams && r.teams[0]) || "WT";
       const short = (r.teams || []).map((x) => (TEAMS.find((y) => y[0] === x) || [])[2] || x).join("/");
       return `<div class="ribbon t-${esc(t)}" title="${esc(r.name)}${stage ? " – " + esc(stage.label) : ""}"><b>${esc(short)}</b>${esc(r.name)}${stage ? " " + esc(stage.label) : ""}</div>`;
     }).join("")}
-    ${piges.length ? `<div class="piges">${piges.map((p) => {
-      const t = PIGE_TYPES.find((x) => x[0] === p.type) || PIGE_TYPES[1];
-      const who = p.cm ? (mode === "week" ? cmName(p.cm) : p.cm) : "à attr.";
-      return `<button class="pige ${p.cm ? "" : "todo"}" data-act="open-day" data-date="${date}" title="${esc(t[1])}${p.cm ? " – " + esc(cmName(p.cm)) : " – à attribuer"}"><b>${mode === "week" ? esc(t[1]) : t[2]}</b> ${esc(who)}${p.type === "astreinte" && p.hours ? " " + String(p.hours).replace(".", ",") + "h" : ""}</button>`;
-    }).join("")}</div>` : ""}
     ${entries.map((e) => entryPill(e, mode)).join("")}
   </div>`;
 }
@@ -1033,8 +1037,13 @@ function renderAdmin() {
   if (!box) return;
   const acc = S.access;
   box.innerHTML = `
-    <section><h2>Accès</h2><p>Les comptes Google autorisés à utiliser l'outil. Admin : <b>${esc(acc.adminEmail)}</b>.</p>
-      <div class="admin-list">${(acc.allowedEmails || []).map((em) => `<div class="admin-row"><span class="grow">${esc(em)}</span><button class="btn ghost small danger" data-act="acc-del" data-v="${esc(em)}">Retirer</button></div>`).join("") || `<p class="muted">Personne d'autre pour l'instant.</p>`}
+    <section><h2>Accès</h2><p>Les comptes Google autorisés à utiliser l'outil. Associe un compte à un CM pour que ses piges ressortent en couleur quand il est connecté.</p>
+      <div class="admin-list">${[acc.adminEmail, ...(acc.allowedEmails || [])].filter(Boolean).map((em) => {
+        const cur = (acc.cmByEmail || {})[em.toLowerCase()] || "";
+        return `<div class="admin-row"><span class="grow">${esc(em)}${em === acc.adminEmail ? " <span class=\"muted\">(admin)</span>" : ""}</span>
+          <select data-acccm="${esc(em.toLowerCase())}" aria-label="CM associé"><option value="">Pas CM</option>${S.lists.cms.map((c) => `<option value="${esc(c.id)}" ${cur === c.id ? "selected" : ""}>${esc(cmName(c.id))}</option>`).join("")}</select>
+          ${em === acc.adminEmail ? "" : `<button class="btn ghost small danger" data-act="acc-del" data-v="${esc(em)}">Retirer</button>`}</div>`;
+      }).join("")}
         <form class="admin-row" data-form="acc-add"><input class="grow" type="email" name="email" placeholder="prenom.nom@gmail.com" required><button class="btn small">Autoriser</button></form></div></section>
 
     <section><h2>Community managers</h2><p>Proposés dans les piges.</p>
@@ -1060,6 +1069,11 @@ const saveLists = (patch, msg) => safe(() => setDoc(doc(db, "config", "lists"), 
 
 document.addEventListener("change", (e) => {
   const t = e.target;
+  if (t.dataset.acccm !== undefined) {
+    const map = { ...(S.access.cmByEmail || {}) };
+    if (t.value) map[t.dataset.acccm] = t.value; else delete map[t.dataset.acccm];
+    safe(() => updateDoc(doc(db, "config", "access"), { cmByEmail: map }), "Enregistré");
+  }
   if (t.dataset.cm !== undefined) { const cms = S.lists.cms.map((c) => ({ ...c })); cms[t.dataset.cm].name = t.value.trim(); saveLists({ cms }, "Enregistré"); }
   if (t.dataset.lbl !== undefined) { const labels = S.lists.labels.map((l) => ({ ...l })); labels[t.dataset.lbl].name = t.value.trim(); saveLists({ labels }, "Libellé renommé"); }
   if (t.dataset.lbltier !== undefined) { const labels = S.lists.labels.map((l) => ({ ...l })); labels[t.dataset.lbltier].tier = Number(t.value); saveLists({ labels }, "Enregistré"); }
@@ -1180,7 +1194,7 @@ document.addEventListener("click", async (e) => {
     case "pige-del": await safe(() => deleteDoc(doc(db, "piges", b.dataset.id)), "Pige retirée"); break;
     case "entry-new": openEntryModal({ newDate: b.dataset.date }); break;
     case "comment-del": if (confirm("Supprimer ce commentaire ?")) await safe(() => deleteDoc(doc(db, "cards", b.dataset.card, "comments", b.dataset.id))); break;
-    case "acc-del": if (confirm(`Retirer l'accès de ${b.dataset.v} ?`)) await safe(() => updateDoc(doc(db, "config", "access"), { allowedEmails: (S.access.allowedEmails || []).filter((x) => x !== b.dataset.v) }), "Accès retiré"); break;
+    case "acc-del": if (confirm(`Retirer l'accès de ${b.dataset.v} ?`)) { const map = { ...(S.access.cmByEmail || {}) }; delete map[b.dataset.v.toLowerCase()]; await safe(() => updateDoc(doc(db, "config", "access"), { allowedEmails: (S.access.allowedEmails || []).filter((x) => x !== b.dataset.v), cmByEmail: map }), "Accès retiré"); } break;
     case "cm-del": if (confirm("Retirer ce CM de la liste ? Les piges déjà attribuées gardent ses initiales.")) await saveLists({ cms: S.lists.cms.filter((_, i) => i !== Number(b.dataset.i)) }, "CM retiré"); break;
     case "lbl-del": if (confirm("Retirer ce libellé ? Il disparaîtra des idées qui l'utilisent.")) await saveLists({ labels: S.lists.labels.filter((_, i) => i !== Number(b.dataset.i)) }, "Libellé retiré"); break;
     case "race-edit": openRaceModal(b.dataset.id); break;
