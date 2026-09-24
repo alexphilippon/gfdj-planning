@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, TIER_NAMES } from "./seed.js";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, TIER_NAMES } from "./seed.js?v=20260924-2";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -96,7 +96,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
   installPrompt = e;
   const b = $("[data-act=install]"); if (b) b.hidden = false;
 });
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch((e) => console.warn("SW", e));
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch((e) => console.warn("SW", e));
 
 /* ---------- Liens & embeds ---------- */
 function parseLink(url) {
