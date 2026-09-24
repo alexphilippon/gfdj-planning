@@ -142,6 +142,7 @@ h1, h2, h3 { font-family: var(--display); margin: 0; letter-spacing: .01em; }
 .period { margin: 0; font-size: 13px; color: var(--ink-2); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip { font-size: 12px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-2); }
+.chip.ctx { background: var(--amber-soft); border-color: #F1D59A; color: #7A4E00; font-weight: 600; }
 .series { font-size: 12px; font-weight: 600; color: var(--t-conti); margin: 0; }
 .empty { padding: 60px 20px; text-align: center; color: var(--ink-2); }
 .empty h2 { font-size: 30px; color: var(--ink); margin-bottom: 6px; }
