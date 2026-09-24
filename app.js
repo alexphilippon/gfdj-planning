@@ -404,7 +404,7 @@ function cardMedia(c) {
 function cardHtml(c) {
   const st = cardStatus(c);
   const lvl = deadlineLevel(c);
-  const labels = (c.labels || []).map(labelById).filter(Boolean);
+  const labels = (c.labels || []).map(labelById).filter(Boolean).sort((x, y) => x.tier - y.tier);
   const pub = cardEntries(c.id).filter((e) => e.published).length;
   return `<article class="card lvl-${lvl} ${st === "abandonnee" || st === "publiee" ? "dim" : ""}" data-act="open-card" data-id="${c.id}" ${isTouch ? "" : `draggable="true" data-drag="card:${c.id}"`}>
     <div class="card-media">${cardMedia(c)}</div>
@@ -413,7 +413,7 @@ function cardHtml(c) {
       <h3>${esc(c.title)}</h3>
       ${starsHtml(c.rating)}
       ${periodText(c) ? `<p class="period">${esc(periodText(c))}</p>` : ""}
-      ${labels.length ? `<div class="chips">${labels.slice(0, 3).map((l) => `<span class="chip">${esc(l.name)}</span>`).join("")}${labels.length > 3 ? `<span class="chip">+${labels.length - 3}</span>` : ""}</div>` : ""}
+      ${labels.length ? `<div class="chips">${labels.slice(0, 3).map((l) => `<span class="chip ${l.tier === 0 ? "ctx" : ""}">${esc(l.name)}</span>`).join("")}${labels.length > 3 ? `<span class="chip">+${labels.length - 3}</span>` : ""}</div>` : ""}
       ${c.series ? `<p class="series">Série : ${pub}${c.seriesTarget ? "/" + c.seriesTarget : ""} publiée${pub > 1 ? "s" : ""}</p>` : ""}
     </div></article>`;
 }
@@ -529,7 +529,7 @@ function renderPanel() {
       <button class="sug-head" data-act="sug-toggle" data-id="${c.id}" aria-expanded="${open}"><span class="sug-title">${esc(c.title)}</span>${c.rating ? `<span class="sug-stars">★${c.rating}</span>` : ""}</button>
       <div class="sug-why">${esc(why)}${c.series ? " · série" : ""}${deadlineBadge(c)}</div>
       ${open ? `<div class="sug-detail">${img ? `<img src="${esc(img)}" alt="">` : ""}${c.text ? `<p>${esc(c.text.slice(0, 220))}${c.text.length > 220 ? "…" : ""}</p>` : ""}
-        ${labels.length ? `<div class="chips">${labels.map((l) => `<span class="chip">${esc(l.name)}</span>`).join("")}</div>` : ""}
+        ${labels.length ? `<div class="chips">${labels.map((l) => `<span class="chip ${l.tier === 0 ? "ctx" : ""}">${esc(l.name)}</span>`).join("")}</div>` : ""}
         <button class="btn small" data-act="open-card" data-id="${c.id}">Ouvrir la fiche</button></div>` : ""}
     </div>`;
   }).join("");
@@ -930,8 +930,11 @@ function renderAdmin() {
       <div class="admin-list">${S.lists.cms.map((c, i) => `<div class="admin-row"><b class="w-s">${esc(c.id)}</b><input class="grow" data-cm="${i}" value="${esc(c.name)}" placeholder="Nom complet"><button class="btn ghost small danger" data-act="cm-del" data-i="${i}">Retirer</button></div>`).join("")}
         <form class="admin-row" data-form="cm-add"><input class="w-s" name="id" placeholder="Init." maxlength="4" required><input class="grow" name="name" placeholder="Nom complet"><button class="btn small">Ajouter</button></form></div></section>
 
-    <section><h2>Libellés</h2><p>Liste fermée proposée sur les idées. Classés par rang de partenariat.</p>
-      <div class="admin-list">${S.lists.labels.map((l, i) => `<div class="admin-row"><input class="grow" data-lbl="${i}" value="${esc(l.name)}"><select data-lbltier="${i}">${Object.entries(TIER_NAMES).map(([t, n]) => `<option value="${t}" ${String(l.tier) === t ? "selected" : ""}>${esc(n)}</option>`).join("")}</select><button class="btn ghost small danger" data-act="lbl-del" data-i="${i}">Retirer</button></div>`).join("")}
+    <section><h2>Libellés</h2><p>Liste fermée proposée sur les idées : un rang « Contexte » (victoire, anniversaire, record…) puis les partenaires par rang.</p>
+      <div class="admin-list">${Object.entries(TIER_NAMES).map(([t, tn]) => {
+        const rows = S.lists.labels.map((l, i) => [l, i]).filter(([l]) => String(l.tier) === t);
+        return `<h4 class="muted" style="margin:8px 0 0">${esc(tn)}${rows.length ? "" : " – aucun libellé"}</h4>` + rows.map(([l, i]) => `<div class="admin-row"><input class="grow" data-lbl="${i}" value="${esc(l.name)}"><select data-lbltier="${i}">${Object.entries(TIER_NAMES).map(([t2, n]) => `<option value="${t2}" ${String(l.tier) === t2 ? "selected" : ""}>${esc(n)}</option>`).join("")}</select><button class="btn ghost small danger" data-act="lbl-del" data-i="${i}">Retirer</button></div>`).join("");
+      }).join("")}
         <form class="admin-row" data-form="lbl-add"><input class="grow" name="name" placeholder="Nouveau libellé" required><select name="tier">${Object.entries(TIER_NAMES).map(([t, n]) => `<option value="${t}">${esc(n)}</option>`).join("")}</select><button class="btn small">Ajouter</button></form></div></section>
 
     <section><h2>Courses</h2><p>Affichées en bandeau sur le planning et proposées dans la période des idées.</p>
