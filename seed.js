@@ -92,7 +92,7 @@ export const SEED_PIGES = [
   ["2026-10-14", "premium", "LL"], ["2026-10-15", "premium", "JR"], ["2026-10-16", "premium", "JR"],
   ["2026-10-17", "premium", "JR"], ["2026-10-18", "classique", "JR"], ["2026-10-18", "premium", "LL"],
   // Jours sans C / P / E dans le Sheet = astreinte (heures à saisir après coup)
-  ...astreintes(["2026-10-01", "2026-10-02", "2026-10-09", "2026-10-12"], ["2026-10-19", "2026-12-31"]),
+  ...astreintes(["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-09", "2026-10-12"], ["2026-10-19", "2026-12-31"]),
 ].map(([date, type, cm]) => ({ date, type, cm }));
 
 function astreintes(days, [from, to]) {
