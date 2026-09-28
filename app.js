@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-2";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-3";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -510,11 +510,24 @@ function dayCell(date, { mode, out, map }) {
     const cl = ["pige", p.cm ? "" : "todo", mine && p.cm === mine ? "mine" : ""].join(" ");
     return `<button class="${cl}" data-act="open-day" data-date="${date}" title="${esc(t[1])}${p.cm ? " – " + esc(cmName(p.cm)) : " – à attribuer"}"><b>${mode === "week" ? esc(t[1]) : t[2]}</b> ${esc(who)}${p.type === "astreinte" && p.hours ? " " + String(p.hours).replace(".", ",") + "h" : ""}</button>`;
   }).join("");
+  const today = todayIso();
+  const rs = races.map(({ r, stage }) => {
+    const miss = today <= r.end ? missingCompos(r) : [];
+    return { r, stage, miss, urgent: miss.length > 0 && today >= addDays(r.start, -1) };
+  }).sort((a, b) => b.urgent - a.urgent);
+  const anyUrgent = rs.some((x) => x.urgent);
+  const raceLine = rs.map(({ r, stage, miss, urgent }) => {
+    const t = (r.teams && r.teams[0]) || "WT";
+    const tip = `${(r.teams || []).map(teamShort).join("/")} · ${r.name}${stage ? " " + stage.label : ""}${urgent ? " – compo à annoncer" : miss.length ? " – compo pas encore au planning" : ""}${miss.length && (r.teams || []).length > 1 ? " (" + miss.map(teamShort).join("/") + ")" : ""}`;
+    return `<span class="rc t-${esc(t)} ${urgent ? "urgent" : ""}" title="${esc(tip)}">${miss.length ? "⚠️\u202F" : ""}${esc(r.name)}${stage ? " " + esc(stage.label) : ""}</span>`;
+  }).join(`<span class="rc-sep"> - </span>`);
   return `<div class="${cls}" ${off ? "" : `data-drop="day" data-date="${date}"`}>
+    <div class="day-top ${rs.length ? "has-races" : ""} ${anyUrgent ? "urgent" : ""}">
     <div class="day-head"><span class="dnum">${d.getDate()}</span>${mode === "week" || isTouch ? `<span class="dname">${d.toLocaleDateString("fr-FR", { weekday: mode === "week" ? "short" : "long" })}</span>` : ""}
       ${pigesHtml ? `<span class="piges">${pigesHtml}</span>` : ""}
       ${off ? "" : `<button class="day-add" data-act="open-day" data-date="${date}" title="Piges et publications du jour" aria-label="Ouvrir le ${fmtLong(date)}">+</button>`}</div>
-    ${races.map(({ r, stage }) => ribbonHtml(r, stage)).join("")}
+    ${raceLine ? `<div class="races">${raceLine}</div>` : ""}
+    </div>
     ${entries.map((e) => entryPill(e, mode)).join("")}
   </div>`;
 }
