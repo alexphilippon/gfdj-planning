@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-8";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-9";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -78,6 +78,12 @@ const S = {
   openDay: null,
 };
 let unsubs = [];
+let reqUnsub = null;
+const pendingRequests = () => (S.requests || []).filter((r) => r.status === "pending");
+function updateAdminBadge() {
+  const b = $('[data-act=view][data-v=admin]');
+  if (b) b.innerHTML = `Admin${pendingRequests().length ? ` <span class="nav-badge">${pendingRequests().length}</span>` : ""}`;
+}
 
 /* ---------- Partage (PWA Android / Raccourci iOS) ---------- */
 let pendingShare = (() => {
@@ -273,8 +279,22 @@ onAuthStateChanged(auth, async (user) => {
     console.error(e);
     S.denied = true;
     renderGate();
+    await fileAccessRequest(user);
   }
 });
+
+// Premier login d'un compte inconnu : on dépose une demande d'accès que l'admin valide dans l'onglet Admin.
+async function fileAccessRequest(user) {
+  const ref = doc(db, "accessRequests", user.email.toLowerCase());
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, { email: user.email.toLowerCase(), name: user.displayName || "", photo: user.photoURL || "", status: "pending", createdAt: serverTimestamp() });
+      S.request = "pending";
+    } else S.request = snap.data().status || "pending";
+  } catch (e) { console.error(e); S.request = "error"; }
+  if (S.denied && S.user === user) renderGate();
+}
 
 async function seedAll() {
   const b = writeBatch(db);
@@ -324,6 +344,13 @@ function startListeners() {
     const wasAdmin = S.isAdmin;
     S.access = s.data() || {};
     S.isAdmin = S.access.adminEmail === S.user.email;
+    if (S.isAdmin && !reqUnsub) {
+      reqUnsub = onSnapshot(collection(db, "accessRequests"), (qs) => {
+        S.requests = qs.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        if (S.ready) { updateAdminBadge(); if (S.view === "admin") renderAdmin(); }
+      }, (e) => console.error(e));
+      unsubs.push(() => { reqUnsub && reqUnsub(); reqUnsub = null; });
+    }
     if (S.ready && wasAdmin !== S.isAdmin) mountShell();
     done("access");
   }, fail));
@@ -354,9 +381,14 @@ function refresh(what) {
 /* ---------- Écrans ---------- */
 function renderGate() {
   if (S.denied) {
+    const msg = {
+      pending: `Ta demande d'accès pour <b>${esc(S.user?.email)}</b> a été transmise à l'admin. Recharge la page une fois qu'elle a été validée.`,
+      refused: `La demande d'accès de <b>${esc(S.user?.email)}</b> n'a pas été acceptée. Rapproche-toi de l'admin si c'est une erreur.`,
+      error: `Le compte <b>${esc(S.user?.email)}</b> n'a pas accès et la demande n'a pas pu être envoyée. Contacte l'admin directement.`,
+    }[S.request] || `Vérification de l'accès de <b>${esc(S.user?.email)}</b>…`;
     $("#app").innerHTML = `<div class="gate"><div class="gate-box">
-      <h1>ACCÈS NON AUTORISÉ</h1>
-      <p>Le compte <b>${esc(S.user?.email)}</b> n'est pas dans la liste d'accès. Demande à l'admin de l'ajouter, puis recharge la page.</p>
+      <h1>${S.request === "refused" ? "ACCÈS REFUSÉ" : S.request === "pending" ? "DEMANDE ENVOYÉE" : "ACCÈS NON AUTORISÉ"}</h1>
+      <p>${msg}</p>
       <button class="btn" data-act="logout">Changer de compte</button></div></div>`;
     return;
   }
@@ -375,7 +407,7 @@ function mountShell() {
       <nav>
         <button data-act="view" data-v="desk" class="${S.view === "desk" ? "on" : ""}">Desk</button>
         <button data-act="view" data-v="planning" class="${S.view === "planning" ? "on" : ""}">Planning</button>
-        ${S.isAdmin ? `<button data-act="view" data-v="admin" class="${S.view === "admin" ? "on" : ""}">Admin</button>` : ""}
+        ${S.isAdmin ? `<button data-act="view" data-v="admin" class="${S.view === "admin" ? "on" : ""}">Admin${pendingRequests().length ? ` <span class="nav-badge">${pendingRequests().length}</span>` : ""}</button>` : ""}
       </nav>
       <div class="top-actions">
         <button class="btn" data-act="install" ${installPrompt ? "" : "hidden"} style="background:transparent;color:#fff;border-color:#34426B">Installer l'app</button>
@@ -1102,6 +1134,10 @@ function renderAdmin() {
   if (!box) return;
   const acc = S.access;
   box.innerHTML = `
+    ${(S.requests || []).length ? `<section><h2>Demandes d'accès</h2><p>Comptes Google qui se sont connectés sans être autorisés. Rien n'est visible pour eux tant que tu n'as pas validé.</p>
+      <div class="admin-list">${(S.requests || []).map((r) => `<div class="admin-row"><span class="grow"><b>${esc(r.name || r.email)}</b>${r.name ? ` <span class="muted">${esc(r.email)}</span>` : ""}${r.createdAt?.seconds ? ` <span class="muted">– ${new Date(r.createdAt.seconds * 1000).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>` : ""}${r.status === "refused" ? ` <span class="status s-abandonnee">Refusée</span>` : ""}</span>
+        <button class="btn small primary" data-act="req-ok" data-v="${esc(r.id)}">Autoriser</button>
+        ${r.status === "refused" ? `<button class="btn ghost small danger" data-act="req-del" data-v="${esc(r.id)}">Effacer</button>` : `<button class="btn ghost small danger" data-act="req-no" data-v="${esc(r.id)}">Refuser</button>`}</div>`).join("")}</div></section>` : ""}
     <section><h2>Accès</h2><p>Les comptes Google autorisés à utiliser l'outil. Associe un compte à un CM pour que ses piges ressortent en couleur quand il est connecté.</p>
       <div class="admin-list">${[acc.adminEmail, ...(acc.allowedEmails || [])].filter(Boolean).map((em) => {
         const cur = (acc.cmByEmail || {})[em.toLowerCase()] || "";
@@ -1154,6 +1190,7 @@ document.addEventListener("submit", async (e) => {
     const em = v.email.trim().toLowerCase();
     const list = [...new Set([...(S.access.allowedEmails || []), em])];
     await safe(() => updateDoc(doc(db, "config", "access"), { allowedEmails: list }), `${em} autorisé`);
+    if ((S.requests || []).some((r) => r.id === em)) await safe(() => deleteDoc(doc(db, "accessRequests", em)));
   }
   if (k === "cm-add") {
     const id = v.id.trim().toUpperCase();
@@ -1260,6 +1297,18 @@ document.addEventListener("click", async (e) => {
     case "entry-new": openEntryModal({ newDate: b.dataset.date }); break;
     case "compo-new": openEntryModal({ newDate: b.dataset.date, kind: "compo" }); break;
     case "comment-del": if (confirm("Supprimer ce commentaire ?")) await safe(() => deleteDoc(doc(db, "cards", b.dataset.card, "comments", b.dataset.id))); break;
+    case "req-ok": {
+      const em = b.dataset.v;
+      await safe(async () => {
+        const batch = writeBatch(db);
+        batch.update(doc(db, "config", "access"), { allowedEmails: [...new Set([...(S.access.allowedEmails || []), em])] });
+        batch.delete(doc(db, "accessRequests", em));
+        await batch.commit();
+      }, `${em} autorisé`);
+      break;
+    }
+    case "req-no": if (confirm(`Refuser l'accès à ${b.dataset.v} ?`)) await safe(() => updateDoc(doc(db, "accessRequests", b.dataset.v), { status: "refused" }), "Demande refusée"); break;
+    case "req-del": await safe(() => deleteDoc(doc(db, "accessRequests", b.dataset.v)), "Demande effacée"); break;
     case "acc-del": if (confirm(`Retirer l'accès de ${b.dataset.v} ?`)) { const map = { ...(S.access.cmByEmail || {}) }; delete map[b.dataset.v.toLowerCase()]; await safe(() => updateDoc(doc(db, "config", "access"), { allowedEmails: (S.access.allowedEmails || []).filter((x) => x !== b.dataset.v), cmByEmail: map }), "Accès retiré"); } break;
     case "cm-del": if (confirm("Retirer ce CM de la liste ? Les piges déjà attribuées gardent ses initiales.")) await saveLists({ cms: S.lists.cms.filter((_, i) => i !== Number(b.dataset.i)) }, "CM retiré"); break;
     case "lbl-del": if (confirm("Retirer ce libellé ? Il disparaîtra des idées qui l'utilisent.")) await saveLists({ labels: S.lists.labels.filter((_, i) => i !== Number(b.dataset.i)) }, "Libellé retiré"); break;

@@ -429,3 +429,5 @@ body.dragging .day:not(.off) { transition: background .1s; }
   .embed-box iframe { height: 440px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.nav-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 4px; border-radius: 99px; background: var(--red); color: #fff; font-family: var(--body); font-size: 11px; font-weight: 700; vertical-align: 2px; }
