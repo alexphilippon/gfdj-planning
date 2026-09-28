@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-5";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-6";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -521,7 +521,7 @@ function dayCell(date, { mode, out, map }) {
     const t = (r.teams && r.teams[0]) || "WT";
     const tip = `${(r.teams || []).map(teamShort).join("/")} · ${r.name}${stage ? " " + stage.label : ""}${urgent ? " – compo à annoncer" : miss.length ? " – compo pas encore au planning" : ""}${miss.length && (r.teams || []).length > 1 ? " (" + miss.map(teamShort).join("/") + ")" : ""}`;
     return `<span class="rc t-${esc(t)} ${urgent ? "urgent" : ""}" title="${esc(tip)}">${miss.length ? "⚠️\u202F" : ""}${esc(r.name)}${stage ? " " + esc(stage.label) : ""}</span>`;
-  }).join(`<span class="rc-sep"> - </span>`);
+  }).join(`<span class="rc-sep">\u00A0- </span>`);
   return `<div class="${cls}" ${off ? "" : `data-drop="day" data-date="${date}"`}>
     <div class="day-top ${rs.length ? "has-races" : ""} ${anyUrgent ? "urgent" : ""}">
     <div class="day-head"><span class="dnum">${d.getDate()}</span>${mode === "week" || isTouch ? `<span class="dname">${d.toLocaleDateString("fr-FR", { weekday: mode === "week" ? "short" : "long" })}</span>` : ""}
