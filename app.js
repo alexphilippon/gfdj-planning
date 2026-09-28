@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-9";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-10";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -183,6 +183,7 @@ function periodText(c) {
   if (c.periodType === "race" && c.raceId) { const r = raceById(c.raceId); return r ? `Pour ${r.name} (${fmtShort(r.start)})` : "Course supprimée"; }
   return "";
 }
+const rateHtml = (c) => `<span class="stars rate" role="group" aria-label="Note : ${c.rating || 0} sur 5">${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="${n <= (c.rating || 0) ? "on" : ""}" data-act="rate" data-id="${c.id}" data-n="${n}" aria-label="${n} sur 5" title="${n === (c.rating || 0) ? "Retirer la note" : n + " sur 5"}">★</button>`).join("")}</span>`;
 const starsHtml = (n) => `<span class="stars" aria-label="${n || 0} sur 5">${"★".repeat(n || 0)}<span class="off">${"★".repeat(5 - (n || 0))}</span></span>`;
 
 function racesOn(date) {
@@ -500,7 +501,7 @@ function cardHtml(c) {
     <div class="card-body">
       <div class="card-top"><span class="status s-${st}">${STATUS[st]}</span>${deadlineBadge(c)}</div>
       <h3>${esc(c.title)}</h3>
-      ${starsHtml(c.rating)}
+      ${rateHtml(c)}
       ${periodText(c) ? `<p class="period">${esc(periodText(c))}</p>` : ""}
       ${labels.length ? `<div class="chips">${labels.slice(0, 3).map((l) => `<span class="chip ${l.tier === 0 ? "ctx" : ""}">${esc(l.name)}</span>`).join("")}${labels.length > 3 ? `<span class="chip">+${labels.length - 3}</span>` : ""}</div>` : ""}
       ${c.series ? `<p class="series">Série : ${pub}${c.seriesTarget ? "/" + c.seriesTarget : ""} publiée${pub > 1 ? "s" : ""}</p>` : ""}
@@ -1271,6 +1272,14 @@ document.addEventListener("click", async (e) => {
     case "install":
       if (installPrompt) { installPrompt.prompt(); const r = await installPrompt.userChoice; installPrompt = null; b.hidden = true; if (r.outcome === "accepted") toast("App installée"); }
       break;
+    case "rate": {
+      e.stopPropagation();
+      const c = cardById(b.dataset.id); if (!c) break;
+      const n = Number(b.dataset.n); const v = (c.rating || 0) === n ? 0 : n;
+      c.rating = v; renderBody();
+      await safe(() => updateDoc(doc(db, "cards", c.id), { rating: v, updatedAt: serverTimestamp() }));
+      break;
+    }
     case "open-card": e.stopPropagation(); openCardModal(b.dataset.id); break;
     case "open-entry": {
       e.stopPropagation();

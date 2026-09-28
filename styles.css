@@ -169,6 +169,14 @@ a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 .dl-0 { background: var(--paper); color: var(--ink-2); }
 .stars { color: var(--blue); letter-spacing: 1px; font-size: 14px; }
 .stars .off { color: var(--line); }
+.stars.rate { display: inline-flex; letter-spacing: 0; }
+.stars.rate button { background: none; border: 0; padding: 0 2px 0 0; font-size: 17px; line-height: 1; color: var(--line); cursor: pointer; }
+.stars.rate button.on { color: var(--blue); }
+.stars.rate:hover button { color: var(--blue); }
+.stars.rate button:hover ~ button { color: var(--line); }
+.card.st-enprod .stars.rate button { color: rgba(31,41,76,.25); } .card.st-enprod .stars.rate button.on, .card.st-enprod .stars.rate:hover button { color: var(--ink); }
+.card.st-publiee .stars.rate button { color: #34426B; } .card.st-publiee .stars.rate button.on, .card.st-publiee .stars.rate:hover button { color: #8FC3E8; }
+.card.st-enprod .stars.rate button:hover ~ button { color: rgba(31,41,76,.25); } .card.st-publiee .stars.rate button:hover ~ button { color: #34426B; }
 .period { margin: 0; font-size: 13px; color: var(--ink-2); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip { font-size: 12px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-2); }
