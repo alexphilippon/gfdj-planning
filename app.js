@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-7";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-8";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -504,7 +504,8 @@ function dayCell(date, { mode, out, map }) {
   const d = parse(date);
   const mine = myCm();
   const isMine = !!mine && piges.some((p) => p.cm === mine);
-  const cls = ["day", out ? "out" : "", off ? "off" : "", date === todayIso() ? "today" : "", isMine ? "mine" : ""].join(" ");
+  const tIso = todayIso();
+  const cls = ["day", out ? "out" : "", off ? "off" : "", date === tIso ? "today" : "", date < tIso && !off ? "past" : "", isMine ? "mine" : ""].join(" ");
   const pigesHtml = piges.map((p) => {
     const t = PIGE_TYPES.find((x) => x[0] === p.type) || PIGE_TYPES[1];
     const who = p.cm ? (mode === "week" ? cmName(p.cm) : p.cm) : "à attr.";
@@ -524,7 +525,7 @@ function dayCell(date, { mode, out, map }) {
   }).join(`<span class="rc-sep">\u00A0- </span>`);
   return `<div class="${cls}" ${off ? "" : `data-drop="day" data-date="${date}"`}>
     <div class="day-top ${rs.length ? "has-races" : ""} ${anyUrgent ? "urgent" : ""}">
-    <div class="day-head"><span class="dnum">${d.getDate()}</span>${mode === "week" || isTouch ? `<span class="dname">${d.toLocaleDateString("fr-FR", { weekday: mode === "week" ? "short" : "long" })}</span>` : ""}
+    <div class="day-head"><span class="dnum">${d.getDate()}</span>${date === tIso ? `<span class="today-tag">Aujourd'hui</span>` : ""}${mode === "week" || isTouch ? `<span class="dname">${d.toLocaleDateString("fr-FR", { weekday: mode === "week" ? "short" : "long" })}</span>` : ""}
       ${pigesHtml ? `<span class="piges">${pigesHtml}</span>` : ""}
       ${off ? "" : `<button class="day-add" data-act="open-day" data-date="${date}" title="Piges et publications du jour" aria-label="Ouvrir le ${fmtLong(date)}">+</button>`}</div>
     ${raceLine ? `<div class="races">${raceLine}</div>` : ""}
@@ -556,7 +557,7 @@ function renderPlan() {
         const c = n === 0 ? "" : n === 1 ? "c1" : n <= 3 ? "c2" : "c3";
         const r = races.length ? "r-" + ((races[0].r.teams || [])[0] || "WT") : "";
         if (!inRange(d)) { html += `<button disabled style="opacity:.3">${parse(d).getDate()}</button>`; continue; }
-        html += `<button class="${c} ${r} ${d === todayIso() ? "today" : ""}" data-act="goto-week" data-date="${d}" title="${fmtLong(d)}${n ? ` – ${n} publication${n > 1 ? "s" : ""}` : ""}${races.length ? " – " + esc(races.map((x) => x.r.name).join(", ")) : ""}">${parse(d).getDate()}</button>`;
+        html += `<button class="${c} ${r} ${d === todayIso() ? "today" : ""} ${d < todayIso() ? "past" : ""}" data-act="goto-week" data-date="${d}" title="${fmtLong(d)}${n ? ` – ${n} publication${n > 1 ? "s" : ""}` : ""}${races.length ? " – " + esc(races.map((x) => x.r.name).join(", ")) : ""}">${parse(d).getDate()}</button>`;
       }
       html += `</div></div>`;
     }

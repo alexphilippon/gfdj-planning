@@ -193,7 +193,16 @@ a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 .day.off { background: repeating-linear-gradient(135deg, #F6F7FA 0 6px, #EEF1F5 6px 12px); }
 .day.mine { outline: 2px solid var(--red); outline-offset: -2px; }
 .day.mine.over { outline-color: var(--blue); outline-style: dashed; }
-.day.today .dnum { background: var(--red); color: #fff; }
+.day.today { background: #FFF7F7; box-shadow: inset 0 4px 0 var(--red); }
+.day.today .dnum { background: var(--red); color: #fff; font-size: 22px; height: 30px; min-width: 30px; }
+.today-tag { font-family: var(--display); font-size: 16px; letter-spacing: .04em; color: var(--red); text-transform: uppercase; padding-top: 2px; }
+.day.past { background: #F4F6F9; }
+.day.off > * { opacity: .45; }
+.day.off .dnum { color: var(--ink-3); }
+.day.past > * { opacity: .45; }
+.day.past:hover > * { opacity: 1; }
+.day.past .dnum { color: var(--ink-3); }
+.mini-grid button.past { opacity: .4; }
 .day.over { background: var(--blue-soft); outline: 2px dashed var(--blue); outline-offset: -3px; }
 .day-top { margin: -4px -5px 3px; padding: 4px 5px 3px; }
 .day-top.has-races { background: #EEF2F8; border-bottom: 1px solid #E1E7F0; }
