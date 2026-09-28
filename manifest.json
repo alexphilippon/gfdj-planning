@@ -1,13 +1,13 @@
 {
-  "name": "Planning GFDJ United",
+  "name": "Planning GFDJ UNITED",
   "short_name": "Planning GFDJ",
   "description": "Desk d'idées et planning de publication de Groupama-FDJ United",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#15203B",
-  "theme_color": "#15203B",
+  "background_color": "#1F294C",
+  "theme_color": "#1F294C",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },

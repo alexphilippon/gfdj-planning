@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260924-6";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-1";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -354,13 +354,13 @@ function refresh(what) {
 function renderGate() {
   if (S.denied) {
     $("#app").innerHTML = `<div class="gate"><div class="gate-box">
-      <h1>Accès non autorisé<span>Planning GFDJ</span></h1>
+      <h1>ACCÈS NON AUTORISÉ</h1>
       <p>Le compte <b>${esc(S.user?.email)}</b> n'est pas dans la liste d'accès. Demande à l'admin de l'ajouter, puis recharge la page.</p>
       <button class="btn" data-act="logout">Changer de compte</button></div></div>`;
     return;
   }
   $("#app").innerHTML = `<div class="gate"><div class="gate-box">
-    <h1>Planning des publications<span>Groupama-FDJ United</span></h1>
+    <h1>PLANNING DES PUBLICATIONS</h1>
     <p>Le desk des idées de contenus et le planning de publication de l'équipe. Connecte-toi avec ton compte Google pour y accéder.</p>
     <button class="btn primary" data-act="login">Se connecter avec Google</button></div></div>`;
 }
@@ -370,14 +370,14 @@ function mountShell() {
   const u = S.user;
   $("#app").innerHTML = `
     <header class="top">
-      <div class="brand"><b>Planning</b><span>Groupama-FDJ United</span></div>
+      <div class="brand"><img src="logo-blanc.png" alt="Groupama – FDJ United"><b>PLANNING</b></div>
       <nav>
         <button data-act="view" data-v="desk" class="${S.view === "desk" ? "on" : ""}">Desk</button>
         <button data-act="view" data-v="planning" class="${S.view === "planning" ? "on" : ""}">Planning</button>
         ${S.isAdmin ? `<button data-act="view" data-v="admin" class="${S.view === "admin" ? "on" : ""}">Admin</button>` : ""}
       </nav>
       <div class="top-actions">
-        <button class="btn" data-act="install" ${installPrompt ? "" : "hidden"} style="background:transparent;color:#fff;border-color:#3A4870">Installer l'app</button>
+        <button class="btn" data-act="install" ${installPrompt ? "" : "hidden"} style="background:transparent;color:#fff;border-color:#34426B">Installer l'app</button>
         <button class="btn primary" data-act="new-card">Nouvelle idée</button>
         <button class="avatar" data-act="logout" title="Se déconnecter (${esc(u.email)})">${u.photoURL ? `<img src="${esc(u.photoURL)}" alt="">` : esc((u.displayName || u.email)[0].toUpperCase())}</button>
       </div>
@@ -545,7 +545,7 @@ function renderPlan() {
       }
       html += `</div></div>`;
     }
-    html += `</div><div class="legend"><span><i style="background:#D9E1F8"></i>1 publication</span><span><i style="background:#9FB2EC"></i>2 à 3</span><span><i style="background:var(--blue)"></i>4 et plus</span>
+    html += `</div><div class="legend"><span><i style="background:#D6E7F4"></i>1 publication</span><span><i style="background:#8FC3E8"></i>2 à 3</span><span><i style="background:var(--blue)"></i>4 et plus</span>
       <span><i style="background:var(--t-wt)"></i>Course WT</span><span><i style="background:var(--t-conti)"></i>Conti</span><span><i style="background:var(--t-juniors)"></i>Juniors</span></div>`;
     body.innerHTML = html;
     return;

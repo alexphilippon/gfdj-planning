@@ -1,5 +1,5 @@
 // Service worker minimal : rend l'app installable et affiche la dernière version connue hors connexion.
-const CACHE = "gfdj-planning-v2";
+const CACHE = "gfdj-planning-v3";
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "./index.html"])));
   self.skipWaiting();
