@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-3";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-4";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -502,8 +502,9 @@ function dayCell(date, { mode, out, map }) {
   const piges = S.piges.filter((p) => p.date === date);
   const entries = map[date] || [];
   const d = parse(date);
-  const cls = ["day", out ? "out" : "", off ? "off" : "", date === todayIso() ? "today" : ""].join(" ");
   const mine = myCm();
+  const isMine = !!mine && piges.some((p) => p.cm === mine);
+  const cls = ["day", out ? "out" : "", off ? "off" : "", date === todayIso() ? "today" : "", isMine ? "mine" : ""].join(" ");
   const pigesHtml = piges.map((p) => {
     const t = PIGE_TYPES.find((x) => x[0] === p.type) || PIGE_TYPES[1];
     const who = p.cm ? (mode === "week" ? cmName(p.cm) : p.cm) : "à attr.";

@@ -191,6 +191,9 @@ a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 .day.out { background: #F8F9FB; }
 .day.out > * { opacity: .45; }
 .day.off { background: repeating-linear-gradient(135deg, #F6F7FA 0 6px, #EEF1F5 6px 12px); }
+.day.mine { background: #DCEBF7; box-shadow: inset 3px 0 0 var(--blue); }
+.day.mine .day-top.has-races { background: rgba(255,255,255,.6); border-bottom-color: #C5DCEF; }
+.day.mine.out { background: #EAF2F9; }
 .day.today .dnum { background: var(--red); color: #fff; }
 .day.over { background: var(--blue-soft); outline: 2px dashed var(--blue); outline-offset: -3px; }
 .day-top { margin: -4px -5px 3px; padding: 4px 5px 3px; }
