@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-1";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-2";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -208,6 +208,7 @@ function compoTitle(keys) {
   const names = [...new Set(pairs.map((p) => p.r.name))];
   return `Compo ${teams.join("/")} : ${names.join(" + ")}`;
 }
+const safeUrl = (u) => /^https?:\/\/\S+$/i.test((u || "").trim());
 const entryTitle = (e) => {
   if (e.kind === "compo") return compoTitle(e.compos);
   const c = e.cardId && cardById(e.cardId); return c ? c.title : e.title || "Sans titre";
@@ -522,7 +523,7 @@ function entryPill(e, mode) {
   const cls = ["entry", e.virtual ? "bday" : "", e.published ? "pub" : "", e.kind === "compo" ? "compo" : !e.cardId && !e.virtual ? "solo" : ""].join(" ");
   const drag = !isTouch && !e.virtual ? `draggable="true" data-drag="entry:${e.id}"` : "";
   return `<div class="${cls}" data-act="open-entry" data-id="${esc(e.id)}" ${drag} title="${esc(entryTitle(e))}">
-    ${e.time ? `<span class="t">${esc(e.time)}</span>` : ""}<span class="et">${esc(entryTitle(e))}</span>${nets ? `<span class="nets">${nets}</span>` : ""}
+    ${e.time ? `<span class="t">${esc(e.time)}</span>` : ""}<span class="et">${esc(entryTitle(e))}</span>${safeUrl(e.fileUrl) ? `<a class="dl-file" href="${esc(e.fileUrl)}" target="_blank" rel="noopener" draggable="false" data-act="file-dl" title="Télécharger le fichier" aria-label="Télécharger le fichier"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 1.5v8.2M4.6 6.6 8 10l3.4-3.4M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ""}${nets ? `<span class="nets">${nets}</span>` : ""}
     ${mode === "week" && e.wording ? `<span class="wd">${esc(e.wording)}</span>` : ""}</div>`;
 }
 function renderPlan() {
@@ -892,6 +893,9 @@ function openEntryModal(arg) {
       </div>
       <div class="field"><span class="field-label">Réseaux</span><div class="chk-chips">${NETWORKS.map(([k, l]) => `<label><input type="checkbox" name="networks" value="${k}" ${(e.networks || []).includes(k) ? "checked" : ""}><span>${l}</span></label>`).join("")}</div></div>
       <label class="field"><span>Wording</span><textarea name="wording" rows="6" placeholder="Texte du post">${esc(e.wording)}</textarea></label>
+      <div class="field"><span class="field-label">Fichier à publier (lien de téléchargement)</span>
+        <div class="row" style="align-items:center;gap:8px"><input name="fileUrl" type="url" value="${esc(e.fileUrl || "")}" placeholder="https://kdrive.infomaniak.com/app/share/…" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;padding:7px 10px">
+        ${safeUrl(e.fileUrl) ? `<a class="btn small" href="${esc(e.fileUrl)}" target="_blank" rel="noopener">Télécharger</a>` : ""}</div></div>
       <label class="row" style="align-items:center;gap:8px"><input type="checkbox" name="published" ${e.published ? "checked" : ""}> Publiée</label>
     </form>
     <div class="modal-foot">
@@ -910,7 +914,9 @@ function openEntryModal(arg) {
       if (!date || !inRange(date)) return toast(`Choisis une date ${RANGE_TXT}.`, true);
       if (isCompo && !fd.getAll("compos").length) return toast("Choisis au moins une course.", true);
       if (!isCompo && !card && !(fd.get("title") || "").trim()) return toast("Donne un titre à la publication.", true);
-      const data = { date, time: fd.get("time") || "", networks: fd.getAll("networks"), wording: (fd.get("wording") || "").trim(), published: !!fd.get("published") };
+      const fileUrl = (fd.get("fileUrl") || "").trim();
+      if (fileUrl && !safeUrl(fileUrl)) return toast("Le lien du fichier doit commencer par https://", true);
+      const data = { date, time: fd.get("time") || "", networks: fd.getAll("networks"), wording: (fd.get("wording") || "").trim(), fileUrl, published: !!fd.get("published") };
       if (isCompo) { data.kind = "compo"; data.compos = fd.getAll("compos"); data.title = compoTitle(data.compos); }
       else if (!card) data.title = fd.get("title").trim();
       const ok = await safe(async () => {

@@ -60,6 +60,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; letter-sp
   padding: 7px 14px; font-weight: 600; font-size: 14px; white-space: nowrap;
 }
 .btn:hover { border-color: var(--ink-3); }
+a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
 .btn.primary:hover { background: #00568F; }
 .btn.danger { color: var(--red); }
@@ -238,6 +239,12 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; letter-sp
 }
 .entry .t { font-weight: 700; color: #8FC3E8; }
 .entry .et { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; font-weight: 600; }
+.entry .dl-file {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; flex: none;
+  background: rgba(255,255,255,.16); color: #fff; align-self: center;
+}
+.entry .dl-file:hover { background: #fff; color: var(--ink); }
+.entry.pub .dl-file, .entry.bday .dl-file { background: rgba(31,41,76,.1); color: var(--ink); }
 .entry .nets { font-size: 10.5px; color: #BCBEC9; }
 .entry .wd { flex-basis: 100%; font-size: 12px; color: #D7DCE6; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
 .entry.pub { background: #E0F5EF; color: var(--green); }
