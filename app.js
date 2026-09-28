@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-6";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-7";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -645,7 +645,7 @@ async function planCard(cardId, date) {
     if (!confirm("Cette idée est déjà planifiée. La planifier une deuxième fois ?\n(Pour un format récurrent, coche « Série de publications » dans la fiche.)")) return;
   }
   await safe(() => addDoc(collection(db, "entries"), {
-    date, time: "", networks: [], wording: "", title: c.title, cardId, published: false,
+    date, time: "", networks: [], content: c.text || "", wording: "", title: c.title, cardId, published: false,
     createdBy: S.user.email, createdAt: serverTimestamp(),
   }), `« ${c.title} » planifiée le ${fmtShort(date)}`);
 }
@@ -906,7 +906,8 @@ function openEntryModal(arg) {
         <label class="field"><span>Heure (facultatif)</span><input type="time" name="time" value="${esc(e.time)}"></label>
       </div>
       <div class="field"><span class="field-label">Réseaux</span><div class="chk-chips">${NETWORKS.map(([k, l]) => `<label><input type="checkbox" name="networks" value="${k}" ${(e.networks || []).includes(k) ? "checked" : ""}><span>${l}</span></label>`).join("")}</div></div>
-      <label class="field"><span>Wording</span><textarea name="wording" rows="6" placeholder="Texte du post">${esc(e.wording)}</textarea></label>
+      <label class="field"><span>Contenu</span><textarea name="content" rows="4" placeholder="Ce qu'on montre : format, hook, déroulé, éléments à récupérer…">${esc(e.content ?? (card ? card.text || "" : ""))}</textarea></label>
+      <label class="field"><span>Wording</span><textarea name="wording" rows="5" placeholder="Texte du post">${esc(e.wording)}</textarea></label>
       <div class="field"><span class="field-label">Fichier à publier (lien de téléchargement)</span>
         <div class="row" style="align-items:center;gap:8px"><input name="fileUrl" type="url" value="${esc(e.fileUrl || "")}" placeholder="https://kdrive.infomaniak.com/app/share/…" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;padding:7px 10px">
         ${safeUrl(e.fileUrl) ? `<a class="btn small" href="${esc(e.fileUrl)}" target="_blank" rel="noopener">Télécharger</a>` : ""}</div></div>
@@ -930,7 +931,7 @@ function openEntryModal(arg) {
       if (!isCompo && !card && !(fd.get("title") || "").trim()) return toast("Donne un titre à la publication.", true);
       const fileUrl = (fd.get("fileUrl") || "").trim();
       if (fileUrl && !safeUrl(fileUrl)) return toast("Le lien du fichier doit commencer par https://", true);
-      const data = { date, time: fd.get("time") || "", networks: fd.getAll("networks"), wording: (fd.get("wording") || "").trim(), fileUrl, published: !!fd.get("published") };
+      const data = { date, time: fd.get("time") || "", networks: fd.getAll("networks"), content: (fd.get("content") || "").trim(), wording: (fd.get("wording") || "").trim(), fileUrl, published: !!fd.get("published") };
       if (isCompo) { data.kind = "compo"; data.compos = fd.getAll("compos"); data.title = compoTitle(data.compos); }
       else if (!card) data.title = fd.get("title").trim();
       const ok = await safe(async () => {
