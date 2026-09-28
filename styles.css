@@ -191,9 +191,8 @@ a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 .day.out { background: #F8F9FB; }
 .day.out > * { opacity: .45; }
 .day.off { background: repeating-linear-gradient(135deg, #F6F7FA 0 6px, #EEF1F5 6px 12px); }
-.day.mine { background: #DCEBF7; box-shadow: inset 3px 0 0 var(--blue); }
-.day.mine .day-top.has-races { background: rgba(255,255,255,.6); border-bottom-color: #C5DCEF; }
-.day.mine.out { background: #EAF2F9; }
+.day.mine { outline: 2px solid var(--red); outline-offset: -2px; }
+.day.mine.over { outline-color: var(--blue); outline-style: dashed; }
 .day.today .dnum { background: var(--red); color: #fff; }
 .day.over { background: var(--blue-soft); outline: 2px dashed var(--blue); outline-offset: -3px; }
 .day-top { margin: -4px -5px 3px; padding: 4px 5px 3px; }
@@ -243,7 +242,7 @@ a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 }
 .pige b { color: var(--ink); margin-right: 2px; }
 .pige.todo { border-color: var(--red); color: var(--red); }
-.pige.mine { background: var(--blue); border-color: var(--blue); color: #fff; }
+.pige.mine { background: var(--red); border-color: var(--red); color: #fff; }
 .pige.mine b { color: #fff; }
 .entry {
   font-size: 12px; line-height: 1.25; padding: 3px 6px; border-radius: 5px; background: var(--ink); color: #fff;
