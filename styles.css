@@ -252,6 +252,7 @@ a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 .compo-opt.is-todo span { border-color: #F5AEB5; color: var(--red); background: var(--red-soft); }
 .compo-opt input:checked + span { background: var(--ink); border-color: var(--ink); color: #fff; }
 .entry.compo { background: var(--blue); }
+.entry.compo.youth { background: #3F8CC8; }
 .piges { display: flex; flex-wrap: wrap; gap: 3px; }
 .pige {
   border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-size: 11px;

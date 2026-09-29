@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260928-10";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260929-1";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -211,10 +211,11 @@ const teamShort = (t) => (TEAMS.find((y) => y[0] === t) || [])[2] || t;
 function compoTitle(keys) {
   const pairs = (keys || []).map((k) => { const [id, t] = k.split(":"); return { r: raceById(id), t }; }).filter((x) => x.r);
   if (!pairs.length) return "Annonce compo";
-  const teams = TEAMS.map((x) => x[0]).filter((t) => pairs.some((p) => p.t === t)).map((t) => TEAMS.find((x) => x[0] === t)[1]);
   const names = [...new Set(pairs.map((p) => p.r.name))];
-  return `Compo ${teams.join("/")} : ${names.join(" + ")}`;
+  return `Compo ${names.join(" + ")}`;
 }
+// Compo « jeunes » (Conti / Juniors uniquement) : teinte plus claire
+const compoIsYouth = (e) => (e.compos || []).length > 0 && (e.compos || []).every((k) => !k.endsWith(":WT"));
 const safeUrl = (u) => /^https?:\/\/\S+$/i.test((u || "").trim());
 const entryTitle = (e) => {
   if (e.kind === "compo") return compoTitle(e.compos);
@@ -568,7 +569,7 @@ function dayCell(date, { mode, out, map }) {
 }
 function entryPill(e, mode) {
   const nets = (e.networks || []).map((n) => (NETWORKS.find((x) => x[0] === n) || [])[1]).filter(Boolean).join(" ");
-  const cls = ["entry", e.virtual ? "bday" : "", e.published ? "pub" : "", e.kind === "compo" ? "compo" : !e.cardId && !e.virtual ? "solo" : ""].join(" ");
+  const cls = ["entry", e.virtual ? "bday" : "", e.published ? "pub" : "", e.kind === "compo" ? (compoIsYouth(e) ? "compo youth" : "compo") : !e.cardId && !e.virtual ? "solo" : ""].join(" ");
   const drag = !isTouch && !e.virtual ? `draggable="true" data-drag="entry:${e.id}"` : "";
   return `<div class="${cls}" data-act="open-entry" data-id="${esc(e.id)}" ${drag} title="${esc(entryTitle(e))}">
     ${e.time ? `<span class="t">${esc(e.time)}</span>` : ""}<span class="et">${esc(entryTitle(e))}</span>${safeUrl(e.fileUrl) ? `<a class="dl-file" href="${esc(e.fileUrl)}" target="_blank" rel="noopener" draggable="false" data-act="file-dl" title="Télécharger le fichier" aria-label="Télécharger le fichier"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 1.5v8.2M4.6 6.6 8 10l3.4-3.4M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ""}${nets ? `<span class="nets">${nets}</span>` : ""}
