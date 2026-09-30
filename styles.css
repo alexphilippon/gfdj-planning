@@ -440,3 +440,6 @@ body.dragging .day:not(.off) { transition: background .1s; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 .nav-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 4px; border-radius: 99px; background: var(--red); color: #fff; font-family: var(--body); font-size: 11px; font-weight: 700; vertical-align: 2px; }
+
+.pige.field { border-color: #CBD5E1; background: #F2F4F7; color: var(--ink); white-space: nowrap; }
+.admin-row label.muted { display: inline-flex; align-items: center; gap: 4px; }

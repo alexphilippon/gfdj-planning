@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260929-1";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260930-1";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -31,6 +31,12 @@ const PIGE_TYPES = [["astreinte", "Astreinte", "A"], ["classique", "Classique", 
 const TEAMS = [["WT", "WorldTeam", "WT"], ["Conti", "Conti", "Conti"], ["Juniors", "Juniors", "U19"]];
 const STATUS = { idee: "Idée", indexee: "Indexée", planifiee: "Planifiée", publiee: "Publiée", abandonnee: "Abandonnée" };
 const isTouch = matchMedia("(pointer: coarse)").matches;
+const SEED_FIELD = [["AL", "Alexandra Lassiaille"], ["VM", "Valentin Morreel"], ["ChM", "Christophe Morel"], ["LD", "Loïc Dujardin"], ["TMX", "Thomas Maheux"]].map(([id, name]) => ({ id, name }));
+const COUNTRIES = [["FR", "France"], ["BE", "Belgique"], ["IT", "Italie"], ["ES", "Espagne"], ["NL", "Pays-Bas"], ["CH", "Suisse"], ["DE", "Allemagne"], ["LU", "Luxembourg"], ["GB", "Royaume-Uni"], ["DK", "Danemark"], ["NO", "Norvège"], ["PL", "Pologne"], ["CZ", "Tchéquie"], ["SK", "Slovaquie"], ["SI", "Slovénie"], ["HR", "Croatie"], ["AT", "Autriche"], ["PT", "Portugal"], ["IE", "Irlande"], ["BG", "Bulgarie"], ["HU", "Hongrie"], ["TR", "Turquie"], ["AE", "Émirats arabes unis"], ["OM", "Oman"], ["SA", "Arabie saoudite"], ["RW", "Rwanda"], ["AU", "Australie"], ["NZ", "Nouvelle-Zélande"], ["CA", "Canada"], ["US", "États-Unis"], ["CN", "Chine"], ["JP", "Japon"], ["CO", "Colombie"]];
+const flag = (cc) => (cc || "").toUpperCase().replace(/[A-Z]/g, (ch) => String.fromCodePoint(0x1f1a5 + ch.charCodeAt(0)));
+const countryName = (cc) => (COUNTRIES.find((c) => c[0] === cc) || [cc, cc])[1];
+const fieldName = (id) => { const p = (S.lists.field || []).find((x) => x.id === id); return p ? p.name : id; };
+const fieldOn = (date) => (S.lists.fieldStays || []).filter((f) => f.start <= date && date <= f.end).sort((a, b) => a.person.localeCompare(b.person));
 
 /* ---------- Utilitaires ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -338,7 +344,7 @@ function startListeners() {
   const pending = new Set(["access", "lists", "cards", "entries", "piges", "races", "birthdays"]);
   const done = (k) => {
     pending.delete(k);
-    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (pendingShare) { const sh = pendingShare; pendingShare = null; openCardModal(null, sh); } if (S.isAdmin && !S.lists.imports?.pigesSheet2026v5) importSheetPiges(); }
+    if (!pending.size && !S.ready) { S.ready = true; mountShell(); if (pendingShare) { const sh = pendingShare; pendingShare = null; openCardModal(null, sh); } if (S.isAdmin && !S.lists.imports?.pigesSheet2026v5) importSheetPiges(); if (S.isAdmin && !S.lists.field) saveLists({ field: SEED_FIELD, fieldStays: [] }); }
     else if (S.ready) refresh(k);
   };
   const fail = (e) => { console.error(e); if (e.code === "permission-denied") { S.denied = true; renderGate(); } };
@@ -561,6 +567,7 @@ function dayCell(date, { mode, out, map }) {
     <div class="day-top ${rs.length ? "has-races" : ""} ${anyUrgent ? "urgent" : ""}">
     <div class="day-head"><span class="dnum">${d.getDate()}</span>${date === tIso ? `<span class="today-tag">Aujourd'hui</span>` : ""}${mode === "week" || isTouch ? `<span class="dname">${d.toLocaleDateString("fr-FR", { weekday: mode === "week" ? "short" : "long" })}</span>` : ""}
       ${pigesHtml ? `<span class="piges">${pigesHtml}</span>` : ""}
+      ${fieldOn(date).map((f) => `<button class="pige field" data-act="open-day" data-date="${date}" title="Terrain – ${esc(fieldName(f.person))} – ${esc(countryName(f.country))}">🧳 ${esc(f.person)} ${flag(f.country)}</button>`).join("")}
       ${off ? "" : `<button class="day-add" data-act="open-day" data-date="${date}" title="Piges et publications du jour" aria-label="Ouvrir le ${fmtLong(date)}">+</button>`}</div>
     ${raceLine ? `<div class="races">${raceLine}</div>` : ""}
     </div>
@@ -998,6 +1005,7 @@ function refreshDayModal() {
   const hoursOpts = (v) => `<option value="">Heures ?</option>${Array.from({ length: 16 }, (_, i) => (i + 1) / 2).map((h) => `<option value="${h}" ${Number(v) === h ? "selected" : ""}>${String(h).replace(".", ",")} h</option>`).join("")}`;
   box.innerHTML = `
     ${races.length ? `<div class="field"><span class="field-label">Courses</span>${races.map(({ r, stage }) => ribbonHtml(r, stage)).join("")}</div>` : ""}
+    ${fieldOn(date).length ? `<div class="field"><span class="field-label">Sur le terrain</span>${fieldOn(date).map((f) => `<div>🧳 <b>${esc(fieldName(f.person))}</b> (${esc(f.person)}) – ${flag(f.country)} ${esc(countryName(f.country))}, du ${fmtShort(f.start)} au ${fmtShort(f.end)}</div>`).join("")}</div>` : ""}
     <div class="field"><span class="field-label">Piges CM</span>
       ${piges.length ? piges.map((p) => `<div class="pige-row" data-pige="${p.id}">
         <select data-f="type">${PIGE_TYPES.map(([v, l]) => `<option value="${v}" ${p.type === v ? "selected" : ""}>${l}</option>`).join("")}</select>
@@ -1153,6 +1161,18 @@ function renderAdmin() {
       <div class="admin-list">${S.lists.cms.map((c, i) => `<div class="admin-row"><b class="w-s">${esc(c.id)}</b><input class="grow" data-cm="${i}" value="${esc(c.name)}" placeholder="Nom complet"><button class="btn ghost small danger" data-act="cm-del" data-i="${i}">Retirer</button></div>`).join("")}
         <form class="admin-row" data-form="cm-add"><input class="w-s" name="id" placeholder="Init." maxlength="4" required><input class="grow" name="name" placeholder="Nom complet"><button class="btn small">Ajouter</button></form></div></section>
 
+    <section><h2>Terrain</h2><p>Personnes présentes sur place (tournage, photo, accompagnement). Leurs périodes de présence s'affichent sur le planning à côté des piges : 🧳 initiales et drapeau.</p>
+      <div class="admin-list">${(S.lists.field || []).map((f, i) => `<div class="admin-row"><b class="w-s">${esc(f.id)}</b><input class="grow" data-field="${i}" value="${esc(f.name)}" placeholder="Nom complet"><button class="btn ghost small danger" data-act="field-del" data-i="${i}">Retirer</button></div>`).join("")}
+        <form class="admin-row" data-form="field-add"><input class="w-s" name="id" placeholder="Init." maxlength="4" required><input class="grow" name="name" placeholder="Nom complet"><button class="btn small">Ajouter</button></form></div>
+      <h4 class="muted" style="margin:16px 0 6px">Périodes de présence</h4>
+      <div class="admin-list">${[...(S.lists.fieldStays || [])].sort((a, b) => a.start.localeCompare(b.start)).map((f) => `<div class="admin-row" ${f.end < todayIso() ? 'style="opacity:.5"' : ""}><span class="grow">🧳 <b>${esc(f.person)}</b> ${esc(fieldName(f.person))} – ${flag(f.country)} ${esc(countryName(f.country))} – du ${fmtShort(f.start)}${f.start.slice(0, 4) !== f.end.slice(0, 4) ? " " + f.start.slice(0, 4) : ""} au ${fmtShort(f.end)} ${f.end.slice(0, 4)}</span><button class="btn ghost small danger" data-act="stay-del" data-id="${esc(f.id)}">Supprimer</button></div>`).join("") || `<p class="muted">Aucune période saisie.</p>`}
+        <form class="admin-row" data-form="stay-add">
+          <select name="person" required><option value="">Qui ?</option>${(S.lists.field || []).map((f) => `<option value="${esc(f.id)}">${esc(f.id)} – ${esc(f.name)}</option>`).join("")}</select>
+          <label class="muted">du <input type="date" name="start" required></label>
+          <label class="muted">au <input type="date" name="end" required></label>
+          <select name="country" required><option value="">Pays</option>${COUNTRIES.map(([c, n]) => `<option value="${c}">${flag(c)} ${esc(n)}</option>`).join("")}</select>
+          <button class="btn small">Ajouter</button></form></div></section>
+
     <section><h2>Libellés</h2><p>Liste fermée proposée sur les idées : un rang « Contexte » (victoire, anniversaire, record…) puis les partenaires par rang.</p>
       <div class="admin-list">${Object.entries(TIER_NAMES).map(([t, tn]) => {
         const rows = S.lists.labels.map((l, i) => [l, i]).filter(([l]) => String(l.tier) === t);
@@ -1177,6 +1197,7 @@ document.addEventListener("change", (e) => {
     if (t.value) map[t.dataset.acccm] = t.value; else delete map[t.dataset.acccm];
     safe(() => updateDoc(doc(db, "config", "access"), { cmByEmail: map }), "Enregistré");
   }
+  if (t.dataset.field !== undefined) { const field = (S.lists.field || []).map((c) => ({ ...c })); field[t.dataset.field].name = t.value.trim(); saveLists({ field }, "Enregistré"); }
   if (t.dataset.cm !== undefined) { const cms = S.lists.cms.map((c) => ({ ...c })); cms[t.dataset.cm].name = t.value.trim(); saveLists({ cms }, "Enregistré"); }
   if (t.dataset.lbl !== undefined) { const labels = S.lists.labels.map((l) => ({ ...l })); labels[t.dataset.lbl].name = t.value.trim(); saveLists({ labels }, "Libellé renommé"); }
   if (t.dataset.lbltier !== undefined) { const labels = S.lists.labels.map((l) => ({ ...l })); labels[t.dataset.lbltier].tier = Number(t.value); saveLists({ labels }, "Enregistré"); }
@@ -1198,6 +1219,15 @@ document.addEventListener("submit", async (e) => {
     const id = v.id.trim().toUpperCase();
     if (S.lists.cms.some((c) => c.id === id)) return toast("Ces initiales existent déjà.", true);
     await saveLists({ cms: [...S.lists.cms, { id, name: v.name.trim() }] }, "CM ajouté");
+  }
+  if (k === "field-add") {
+    const id = v.id.trim();
+    if ((S.lists.field || []).some((c) => c.id.toLowerCase() === id.toLowerCase())) return toast("Ces initiales existent déjà.", true);
+    await saveLists({ field: [...(S.lists.field || []), { id, name: v.name.trim() }] }, "Personne ajoutée");
+  }
+  if (k === "stay-add") {
+    if (v.end < v.start) return toast("La fin est avant le début.", true);
+    await saveLists({ fieldStays: [...(S.lists.fieldStays || []), { id: uid(), person: v.person, start: v.start, end: v.end, country: v.country }] }, "Présence ajoutée");
   }
   if (k === "lbl-add") await saveLists({ labels: [...S.lists.labels, { id: slug(v.name) + "-" + uid(), name: v.name.trim(), tier: Number(v.tier) }] }, "Libellé ajouté");
   if (k === "bday-add") await safe(() => addDoc(collection(db, "birthdays"), { day: v.day, name: v.name.trim() }), "Anniversaire ajouté");
@@ -1320,6 +1350,8 @@ document.addEventListener("click", async (e) => {
     case "req-no": if (confirm(`Refuser l'accès à ${b.dataset.v} ?`)) await safe(() => updateDoc(doc(db, "accessRequests", b.dataset.v), { status: "refused" }), "Demande refusée"); break;
     case "req-del": await safe(() => deleteDoc(doc(db, "accessRequests", b.dataset.v)), "Demande effacée"); break;
     case "acc-del": if (confirm(`Retirer l'accès de ${b.dataset.v} ?`)) { const map = { ...(S.access.cmByEmail || {}) }; delete map[b.dataset.v.toLowerCase()]; await safe(() => updateDoc(doc(db, "config", "access"), { allowedEmails: (S.access.allowedEmails || []).filter((x) => x !== b.dataset.v), cmByEmail: map }), "Accès retiré"); } break;
+    case "field-del": if (confirm("Retirer cette personne ? Ses périodes de présence restent affichées avec ses initiales.")) await saveLists({ field: (S.lists.field || []).filter((_, i) => i !== Number(b.dataset.i)) }, "Personne retirée"); break;
+    case "stay-del": if (confirm("Supprimer cette période de présence ?")) await saveLists({ fieldStays: (S.lists.fieldStays || []).filter((f) => f.id !== b.dataset.id) }, "Présence supprimée"); break;
     case "cm-del": if (confirm("Retirer ce CM de la liste ? Les piges déjà attribuées gardent ses initiales.")) await saveLists({ cms: S.lists.cms.filter((_, i) => i !== Number(b.dataset.i)) }, "CM retiré"); break;
     case "lbl-del": if (confirm("Retirer ce libellé ? Il disparaîtra des idées qui l'utilisent.")) await saveLists({ labels: S.lists.labels.filter((_, i) => i !== Number(b.dataset.i)) }, "Libellé retiré"); break;
     case "race-edit": openRaceModal(b.dataset.id); break;
