@@ -261,6 +261,9 @@ a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 .compo-opt input:checked + span { background: var(--ink); border-color: var(--ink); color: #fff; }
 .entry.compo { background: var(--blue); }
 .entry.compo.youth { background: #3F8CC8; }
+.entry.reel, .entry.reel.solo, .entry.reel.compo { background: #B9454F; }
+.entry.reel .t { color: #FFD0D4; } .entry.reel .nets { color: #F4C4C8; }
+.entry.reel.pub { background: #E0F5EF; }
 .piges { display: flex; flex-wrap: wrap; gap: 3px; }
 .pige {
   border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-size: 11px;
