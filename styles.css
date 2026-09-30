@@ -1,3 +1,11 @@
+/* Drapeaux : Windows n'affiche pas les emoji de pays, on embarque une police dédiée (Twemoji, CC-BY 4.0)
+   limitée aux caractères de drapeaux ; le reste du texte n'est pas touché. */
+@font-face {
+  font-family: "Twemoji Country Flags";
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
+  src: url("TwemojiCountryFlags.woff2") format("woff2");
+  font-display: swap;
+}
 :root {
   --paper: #F2F4F7;
   --surface: #FFFFFF;
@@ -17,7 +25,7 @@
   --t-juniors: #D26F00;
   --marine: #203360;
   --display: "Bebas Neue", "Arial Narrow", sans-serif;
-  --body: "Montserrat", system-ui, sans-serif;
+  --body: "Twemoji Country Flags", "Montserrat", system-ui, sans-serif;
   --r-s: 6px;
   --r-m: 10px;
   --r-l: 16px;
