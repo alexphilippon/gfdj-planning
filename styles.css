@@ -454,3 +454,25 @@ body.dragging .day:not(.off) { transition: background .1s; }
 
 .pige.field { border-color: #CBD5E1; background: #F2F4F7; color: var(--ink); white-space: nowrap; }
 .admin-row label.muted { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Mode téléphone : un jour par ligne, pleine largeur, titres lisibles en entier */
+body.compact .plan-layout { grid-template-columns: 1fr; }
+body.compact #panel { border-left: 0; border-top: 1px solid var(--line); }
+body.compact .panel-inner { position: static; max-height: none; }
+body.compact #plan-body { padding: 12px; }
+body.compact .weekdays { display: none; }
+body.compact .grid, body.compact .grid.week { display: block; border: 0; background: none; }
+body.compact .grid .day { min-height: 0; border: 1px solid var(--line); border-radius: var(--r-s); margin-bottom: 8px; background: var(--surface); padding: 6px 10px 8px; }
+body.compact .grid .day.out, body.compact .grid .day.off { display: none; }
+body.compact .grid .day.past { display: none; }
+body.compact .grid .day.today { background: #FFF7F7; }
+body.compact .day-top { margin: -6px -10px 4px; padding: 6px 10px 4px; }
+body.compact .races { font-size: 13px; }
+body.compact .entry { font-size: 14px; padding: 6px 9px; }
+body.compact .entry .et { white-space: normal; overflow: visible; }
+body.compact .entry .nets { font-size: 12px; }
+body.compact .dname { display: inline; font-size: 14px; }
+body.compact .dnum { font-size: 22px; }
+body.compact .pige { font-size: 12px; line-height: 20px; padding: 0 6px; }
+body.compact .two-col { grid-template-columns: 1fr; }
+body.compact .day-top:last-child { margin-bottom: -8px; border-bottom: 0; border-radius: 0 0 var(--r-s) var(--r-s); }

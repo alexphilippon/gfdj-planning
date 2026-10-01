@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20260930-3";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20261001-1";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -31,6 +31,9 @@ const PIGE_TYPES = [["astreinte", "Astreinte", "A"], ["classique", "Classique", 
 const TEAMS = [["WT", "WorldTeam", "WT"], ["Conti", "Conti", "Conti"], ["Juniors", "Juniors", "U19"]];
 const STATUS = { idee: "Idée", indexee: "Indexée", planifiee: "Planifiée", publiee: "Publiée", abandonnee: "Abandonnée" };
 const isTouch = matchMedia("(pointer: coarse)").matches;
+// Téléphone (même en « version ordinateur ») : planning en liste de jours, titres en entier
+const isPhone = isTouch && Math.min(screen.width, screen.height) < 600;
+if (isPhone || innerWidth <= 700) document.body.classList.add("compact");
 const SEED_FIELD = [["AL", "Alexandra Lassiaille"], ["VM", "Valentin Morreel"], ["ChM", "Christophe Morel"], ["LD", "Loïc Dujardin"], ["TMX", "Thomas Maheux"]].map(([id, name]) => ({ id, name }));
 const COUNTRIES = [["FR", "France"], ["BE", "Belgique"], ["IT", "Italie"], ["ES", "Espagne"], ["NL", "Pays-Bas"], ["CH", "Suisse"], ["DE", "Allemagne"], ["LU", "Luxembourg"], ["GB", "Royaume-Uni"], ["DK", "Danemark"], ["NO", "Norvège"], ["PL", "Pologne"], ["CZ", "Tchéquie"], ["SK", "Slovaquie"], ["SI", "Slovénie"], ["HR", "Croatie"], ["AT", "Autriche"], ["PT", "Portugal"], ["IE", "Irlande"], ["BG", "Bulgarie"], ["HU", "Hongrie"], ["TR", "Turquie"], ["AE", "Émirats arabes unis"], ["OM", "Oman"], ["SA", "Arabie saoudite"], ["RW", "Rwanda"], ["AU", "Australie"], ["NZ", "Nouvelle-Zélande"], ["CA", "Canada"], ["US", "États-Unis"], ["CN", "Chine"], ["JP", "Japon"], ["CO", "Colombie"]];
 const flag = (cc) => (cc || "").toUpperCase().replace(/[A-Z]/g, (ch) => String.fromCodePoint(0x1f1a5 + ch.charCodeAt(0)));
