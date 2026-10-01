@@ -263,7 +263,6 @@ a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 .entry.compo.youth { background: #3F8CC8; }
 .entry.reel, .entry.reel.solo, .entry.reel.compo { background: #B9454F; }
 .entry.reel .t { color: #FFD0D4; } .entry.reel .nets { color: #F4C4C8; }
-.entry.reel.pub { background: #E0F5EF; }
 .piges { display: flex; flex-wrap: wrap; gap: 3px; }
 .pige {
   border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-size: 11px;
@@ -287,8 +286,6 @@ a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
 .entry.pub .dl-file, .entry.bday .dl-file { background: rgba(31,41,76,.1); color: var(--ink); }
 .entry .nets { font-size: 10.5px; color: #BCBEC9; }
 .entry .wd { flex-basis: 100%; font-size: 12px; color: #D7DCE6; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
-.entry.pub { background: #E0F5EF; color: var(--green); }
-.entry.pub .t, .entry.pub .nets { color: var(--green); }
 .entry.solo { background: #203360; }
 .entry.bday { background: var(--amber-soft); color: #8A4B00; }
 .entry.bday .nets { color: #8A4B00; }
@@ -476,3 +473,8 @@ body.compact .dnum { font-size: 22px; }
 body.compact .pige { font-size: 12px; line-height: 20px; padding: 0 6px; }
 body.compact .two-col { grid-template-columns: 1fr; }
 body.compact .day-top:last-child { margin-bottom: -8px; border-bottom: 0; border-radius: 0 0 var(--r-s) var(--r-s); }
+
+/* Publiée : gris neutre quel que soit le type, coche verte */
+.entry.pub, .entry.pub.reel, .entry.pub.solo, .entry.pub.compo, .entry.pub.compo.youth { background: #EEF1F5; color: var(--ink-3); }
+.entry.pub .t, .entry.pub .nets, .entry.pub .wd { color: var(--ink-3); }
+.pub-ck { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: #00B691; color: #fff; font-size: 10px; font-weight: 700; flex: none; align-self: center; }

@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20261001-1";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20261001-2";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -582,7 +582,7 @@ function entryPill(e, mode) {
   const cls = ["entry", e.virtual ? "bday" : "", e.reel ? "reel" : "", e.published ? "pub" : "", e.kind === "compo" ? (compoIsYouth(e) ? "compo youth" : "compo") : !e.cardId && !e.virtual ? "solo" : ""].join(" ");
   const drag = !isTouch && !e.virtual ? `draggable="true" data-drag="entry:${e.id}"` : "";
   return `<div class="${cls}" data-act="open-entry" data-id="${esc(e.id)}" ${drag} title="${esc(entryTitle(e))}">
-    ${e.time ? `<span class="t">${esc(e.time)}</span>` : ""}<span class="et">${esc(entryTitle(e))}</span>${safeUrl(e.fileUrl) ? `<a class="dl-file" href="${esc(e.fileUrl)}" target="_blank" rel="noopener" draggable="false" data-act="file-dl" title="Télécharger le fichier" aria-label="Télécharger le fichier"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 1.5v8.2M4.6 6.6 8 10l3.4-3.4M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ""}${nets ? `<span class="nets">${nets}</span>` : ""}
+    ${e.published ? `<span class="pub-ck" aria-label="Publiée">✓</span>` : ""}${e.time ? `<span class="t">${esc(e.time)}</span>` : ""}<span class="et">${esc(entryTitle(e))}</span>${safeUrl(e.fileUrl) ? `<a class="dl-file" href="${esc(e.fileUrl)}" target="_blank" rel="noopener" draggable="false" data-act="file-dl" title="Télécharger le fichier" aria-label="Télécharger le fichier"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 1.5v8.2M4.6 6.6 8 10l3.4-3.4M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ""}${nets ? `<span class="nets">${nets}</span>` : ""}
     ${mode === "week" && e.wording ? `<span class="wd">${esc(e.wording)}</span>` : ""}</div>`;
 }
 function renderPlan() {
