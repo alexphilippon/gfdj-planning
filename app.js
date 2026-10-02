@@ -5,7 +5,7 @@ import {
   serverTimestamp, writeBatch, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20261001-2";
+import { SEED_CMS, SEED_LABELS, SEED_RACES, SEED_BIRTHDAYS, SEED_PIGES, SEED_RACES_EXTRA, TIER_NAMES } from "./seed.js?v=20261002-1";
 
 /* ---------- Firebase ---------- */
 const firebaseConfig = {
@@ -33,7 +33,10 @@ const STATUS = { idee: "Idée", indexee: "Indexée", planifiee: "Planifiée", pu
 const isTouch = matchMedia("(pointer: coarse)").matches;
 // Téléphone (même en « version ordinateur ») : planning en liste de jours, titres en entier
 const isPhone = isTouch && Math.min(screen.width, screen.height) < 600;
-if (isPhone || innerWidth <= 700) document.body.classList.add("compact");
+const COMPACT_MAX = 1100; // en dessous : planning en lignes (un jour par ligne)
+const applyCompact = () => document.body.classList.toggle("compact", isPhone || innerWidth <= COMPACT_MAX);
+applyCompact();
+addEventListener("resize", applyCompact);
 const SEED_FIELD = [["AL", "Alexandra Lassiaille"], ["VM", "Valentin Morreel"], ["ChM", "Christophe Morel"], ["LD", "Loïc Dujardin"], ["TMX", "Thomas Maheux"]].map(([id, name]) => ({ id, name }));
 const COUNTRIES = [["FR", "France"], ["BE", "Belgique"], ["IT", "Italie"], ["ES", "Espagne"], ["NL", "Pays-Bas"], ["CH", "Suisse"], ["DE", "Allemagne"], ["LU", "Luxembourg"], ["GB", "Royaume-Uni"], ["DK", "Danemark"], ["NO", "Norvège"], ["PL", "Pologne"], ["CZ", "Tchéquie"], ["SK", "Slovaquie"], ["SI", "Slovénie"], ["HR", "Croatie"], ["AT", "Autriche"], ["PT", "Portugal"], ["IE", "Irlande"], ["BG", "Bulgarie"], ["HU", "Hongrie"], ["TR", "Turquie"], ["AE", "Émirats arabes unis"], ["OM", "Oman"], ["SA", "Arabie saoudite"], ["RW", "Rwanda"], ["AU", "Australie"], ["NZ", "Nouvelle-Zélande"], ["CA", "Canada"], ["US", "États-Unis"], ["CN", "Chine"], ["JP", "Japon"], ["CO", "Colombie"]];
 const flag = (cc) => (cc || "").toUpperCase().replace(/[A-Z]/g, (ch) => String.fromCodePoint(0x1f1a5 + ch.charCodeAt(0)));
@@ -578,11 +581,10 @@ function dayCell(date, { mode, out, map }) {
   </div>`;
 }
 function entryPill(e, mode) {
-  const nets = (e.networks || []).map((n) => (NETWORKS.find((x) => x[0] === n) || [])[1]).filter(Boolean).join(" ");
   const cls = ["entry", e.virtual ? "bday" : "", e.reel ? "reel" : "", e.published ? "pub" : "", e.kind === "compo" ? (compoIsYouth(e) ? "compo youth" : "compo") : !e.cardId && !e.virtual ? "solo" : ""].join(" ");
   const drag = !isTouch && !e.virtual ? `draggable="true" data-drag="entry:${e.id}"` : "";
   return `<div class="${cls}" data-act="open-entry" data-id="${esc(e.id)}" ${drag} title="${esc(entryTitle(e))}">
-    ${e.published ? `<span class="pub-ck" aria-label="Publiée">✓</span>` : ""}${e.time ? `<span class="t">${esc(e.time)}</span>` : ""}<span class="et">${esc(entryTitle(e))}</span>${safeUrl(e.fileUrl) ? `<a class="dl-file" href="${esc(e.fileUrl)}" target="_blank" rel="noopener" draggable="false" data-act="file-dl" title="Télécharger le fichier" aria-label="Télécharger le fichier"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 1.5v8.2M4.6 6.6 8 10l3.4-3.4M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ""}${nets ? `<span class="nets">${nets}</span>` : ""}
+    ${e.published ? `<span class="pub-ck" aria-label="Publiée">✓</span>` : ""}${e.time ? `<span class="t">${esc(e.time)}</span>` : ""}<span class="et">${esc(entryTitle(e))}</span>${safeUrl(e.fileUrl) ? `<a class="dl-file" href="${esc(e.fileUrl)}" target="_blank" rel="noopener" draggable="false" data-act="file-dl" title="Télécharger le fichier" aria-label="Télécharger le fichier"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 1.5v8.2M4.6 6.6 8 10l3.4-3.4M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ""}
     ${mode === "week" && e.wording ? `<span class="wd">${esc(e.wording)}</span>` : ""}</div>`;
 }
 function renderPlan() {
